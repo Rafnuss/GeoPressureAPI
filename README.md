@@ -6,12 +6,19 @@ GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a 
 
 This docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
 
-## Description
 
-With this api, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
+## Pressure map
+
+```http
+GET /glp.mgravey.com/GeoPressure/v1/map/
+```
+
+### Description
+
+With this end-point, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
 
 **Input**
-The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale).
+The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See request for details.
 
 **Ouput**
 We return a maps with two layers.
@@ -22,13 +29,9 @@ To get these map, you first need to call the API which will return a list of url
 
 The time range available to query is the same as ERA5-Land data, which is from 1981 to three months from real-time. More information can be found at the [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land) and the [the corresponding Google Earth Engine dataset](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_HOURLY#description).
 
-## Pressure map
+The time resolution of the ERA-5 is 1 hours. The API will compute the match for any timestamp provided in the request by using the closest 1 hours. To avoid redundant information, downscale the timeserie to 1 hour before the request. 
 
 ### Request
-
-```http
-GET /glp.mgravey.com/GeoPressure/v1/map.py/?
-```
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
@@ -58,11 +61,67 @@ See example for response structure.
 
 
 ## Example
-
+Request
 ```http
-GET /glp.mgravey.com/GeoPressure/v1/map.py/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
+GET /glp.mgravey.com/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
+```
+Response:
+```javascript
+{
+  "status" : success,
+  "task_id" : 1639259414,
+  "data"    : 
+    labels: [1],
+    urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
+    resolution: 0.25,
+    size: [136 188],
+    bbox: {w:-18, S:4, E:16, N:51},
+  }
+}
 ```
 
+
+
+
+## Pressure timeseries
+```http
+GET /glp.mgravey.com/GeoPressure/v1/timeseries/
+```
+### Description
+The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA-5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`).
+
+### Request
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `lon` | `number` | **Required**. longitude coordinate. -180° to 180°. |
+| `lat` | `number` | **Required**. latitude coordinate. 0° to 90°. |
+| `startTime` | `number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of start (i.e., number of second since 1-janv-1970.  |
+| `endTime` | `number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of end (i.e., number of second since 1-janv-1970.  |
+| `pressure` | `array of number` | Atmospheric pressure of the geolocator. |
+
+
+## Responses
+
+See example for response structure.
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `status` | `success` or `error` | |
+| `task_id` | `number` | Task ID. Use this ID for communication if you have any problem. |
+| `labels` | `array of string/number` | List of unique labels. Same order than urls. |
+| `urls` | `array of string` | List of the mismatch urls. |
+| `resolution` | `number` | resolution in degree. Same resolution for lattitude and longitude. |
+| `size` | `array of number` | Number of pixel of the map.|
+| `bbox` | `Object` | Bounding box requested. |
+
+
+## Example
+Request
+```http
+GET /glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=&endTime=
+```
+Response:
 ```javascript
 {
   "status" : success,
