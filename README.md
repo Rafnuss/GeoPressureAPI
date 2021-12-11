@@ -2,22 +2,24 @@
 
 ## Introduction
 
-GeoPressureServer was built from the ground-up with a JSON API that makes it easy for developers and sysadmins to automate simulated phishing campaigns.
-
-These docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
+GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with reanalysis data.
 
 
-## Use Cases
 
-There are many reasons to use the Gophish API. The most common use case is to gather report information for a given campaign, so that you can build custom reports in software you're most familiar with, such as Excel or Numbers.
-
-However, automating the creation of campaigns and campaign attributes such as templates, landing pages, and more provides the ability to create a fully automated phishing simulation program. This would allow campaigns to be run throughout the year automatically. This also allows the Gophish administrator to be included in the campaigns, since they wouldn't know exactly which day it would start!
+This docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
 
 
 ## Requests
 
 ```http
-GET /api/campaigns/?api_key=12345678901234567890123456789012
+http://glp.mgravey.com/
+```
+
+
+### Pressure map
+
+```http
+GET /GeoLocPressure/v1/pressureMap.py/?api_key=12345678901234567890123456789012
 ```
 
 | Parameter | Type | Description |
@@ -52,7 +54,7 @@ Many API endpoints return the JSON representation of the resources created or ed
 
 ## Status Codes
 
-Gophish returns the following status codes in its API:
+GeoLocPressure returns the following status codes in its API:
 
 | Status Code | Description |
 | :--- | :--- |
