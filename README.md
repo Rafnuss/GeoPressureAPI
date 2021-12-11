@@ -27,7 +27,7 @@ The time range available to query is the same as ERA5-Land data, which is from 1
 ### Request
 
 ```http
-GET http://glp.mgravey.com/GeoPressure/v1/map.py/?
+GET /glp.mgravey.com/GeoPressure/v1/map.py/?
 ```
 
 | Parameter | Type | Description |
@@ -49,18 +49,18 @@ See example for response structure.
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `status` | `success` or `error` | |
-| `task_id` | `number` | . |
+| `task_id` | `number` | Task ID. Use this ID for communication if you have any problem. |
 | `labels` | `array of string/number` | List of unique labels. Same order than urls. |
 | `urls` | `array of string` | List of the mismatch urls. |
-| `resolution` | `number` |  |
-| `size` | `array of number` | |
-| `bbox` | `array of number` | |
+| `resolution` | `number` | resolution in degree. Same resolution for lattitude and longitude. |
+| `size` | `array of number` | Number of pixel of the map.|
+| `bbox` | `Object` | Bounding box requested. |
 
 
 ## Example
 
 ```http
-GET http://glp.mgravey.com/GeoPressure/v1/map.py/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
+GET /glp.mgravey.com/GeoPressure/v1/map.py/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
 ```
 
 ```javascript
@@ -70,9 +70,9 @@ GET http://glp.mgravey.com/GeoPressure/v1/map.py/?W=-18&S=4&E=16&N=51&time=[1572
   "data"    : 
     labels: [1],
     urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
-    resolution: ,
-    size: [],
-    bbox: [],
+    resolution: 0.25,
+    size: [136 188],
+    bbox: {w:-18, S:4, E:16, N:51},
   }
 }
 ```
