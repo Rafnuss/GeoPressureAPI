@@ -2,10 +2,23 @@
 
 ## Introduction
 
-GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with reanalysis data.
+GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with the atmospheric pressure from [ERA5-LAND reanalysis data](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land).
 
 This docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
 
+## Description
+
+With this api, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
+
+**Input**
+The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale).
+
+**Ouput**
+We return a maps with two layers.
+1. The [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) between the input pressure timeseries and the reanalysis one at each location, 
+2. A mask of whether the altitude equivalent to the pressure measurement is within the min and max altitude found in each grid cell. The altitude equivalent is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temperature variation from ERA5 data. The min and max altitude of each pixel is computed from the [SRTM-30](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
+
+To get these map, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the geotiff of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
 
 The time range available to query is the same as ERA5-Land data, which is from 1981 to three months from real-time. More information can be found at the [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land) and the [the corresponding Google Earth Engine dataset](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_HOURLY#description).
 
@@ -38,7 +51,7 @@ See example for response structure.
 | `status` | `success` or `error` | |
 | `task_id` | `number` | . |
 | `labels` | `array of string/number` | List of unique labels. Same order than urls. |
-| `urls` | `array of string` | List of urls. |
+| `urls` | `array of string` | List of the mismatch urls. |
 | `resolution` | `number` |  |
 | `size` | `array of number` | |
 | `bbox` | `array of number` | |
@@ -56,7 +69,7 @@ GET http://glp.mgravey.com/GeoPressure/v1/map.py/?W=-18&S=4&E=16&N=51&time=[1572
   "task_id" : 1639259414,
   "data"    : 
     labels: [1],
-    urls: [''],
+    urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
     resolution: ,
     size: [],
     bbox: [],
