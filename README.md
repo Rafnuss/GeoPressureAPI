@@ -7,7 +7,7 @@ GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a 
 This docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
 
 
-
+The time range available to query is the same as ERA5-Land data, which is from 1981 to three months from real-time. More information can be found at the [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land) and the [the corresponding Google Earth Engine dataset](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_HOURLY#description).
 
 ## Pressure map
 
@@ -25,7 +25,7 @@ GET http://glp.mgravey.com/GeoLocPressure/v1/pressureMap.py/?
 | `N` | `number` | **Required**. North coordinate. 0° to 90°. |
 | `scale` | `number` | Number of pixel per latitude, longitude. 10 for a resultion of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale) |
 | `pressure` | `array of number` | **Required**. Atmospheric pressure to match in Pascal. |
-| `time` | `array of number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.  |
+| `time` | `array of number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.   |
 | `label` | `array of string` | **Required**. Define the grouping of the pressure data. All pressure with the same label will be match together |
 
 
