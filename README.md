@@ -4,22 +4,17 @@
 
 GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with reanalysis data.
 
-
-
 This docs describe how to use the [GeoPressureServer](http://glp.mgravey.com/GeoLocPressure/) API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
 
 
-## Requests
+
+
+## Pressure map
+
+### Request
 
 ```http
-http://glp.mgravey.com/
-```
-
-
-### Pressure map
-
-```http
-GET /GeoLocPressure/v1/pressureMap.py/?api_key=12345678901234567890123456789012
+GET http://glp.mgravey.com/GeoLocPressure/v1/pressureMap.py/?
 ```
 
 | Parameter | Type | Description |
@@ -51,16 +46,3 @@ Many API endpoints return the JSON representation of the resources created or ed
  - The `success` attribute describes if the transaction was successful or not.
 
  - The `data` attribute contains any other metadata associated with the response. This will be an escaped string containing JSON data.
-
-## Status Codes
-
-GeoLocPressure returns the following status codes in its API:
-
-| Status Code | Description |
-| :--- | :--- |
-| 200 | `OK` |
-| 201 | `CREATED` |
-| 400 | `BAD REQUEST` |
-| 404 | `NOT FOUND` |
-| 500 | `INTERNAL SERVER ERROR` |
-
