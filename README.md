@@ -39,12 +39,12 @@ The time resolution of the ERA-5 is 1 hours. The API will compute the match for 
 | `S` | `number` | **Required**. South coordinate. 0° to 90°. |
 | `E` | `number` | **Required**. East coordinate. -180° to 180°. |
 | `N` | `number` | **Required**. North coordinate. 0° to 90°. |
-| `scale` | `number` | (*default=10*). Number of pixel per latitude, longitude. 10 for a resultion of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
+| `scale` | `number` | *default: `10`*. Number of pixel per latitude, longitude. 10 for a resultion of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
 | `pressure` | `array of number` | **Required**. Atmospheric pressure to match in Pascal. |
 | `time` | `array of number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.   |
 | `label` | `array of string/number` | **Required**. Define the grouping of the pressure data. All pressure with the same label will be match together |
-| `maxSample` | `number` | (*default=250*). The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeserie.  |
-| `margin` | `number` | (*default=30*). The margin is used in the threadhold map to accept some measurement error. unit in meter. (1hPa~10m) |
+| `maxSample` | `number` | *default: `250`*. The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeserie.  |
+| `margin` | `number` | *default: `30`*. The margin is used in the threadhold map to accept some measurement error. unit in meter. (1hPa~10m) |
 
 ## Responses
 
@@ -91,7 +91,11 @@ Response:
 GET /glp.mgravey.com/GeoPressure/v1/timeseries/
 ```
 ### Description
-The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA-5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`).
+The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA-5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
+
+If you supply the `pressure` (and `time`) of the geolocator, it will additionally return the elevation of the geolocator.
+
+The timeserie of the response will be on the same as `time` if supply, otherwise, it will return on a hourly basis between `startTime` and `endTime`.
 
 ### Request
 
@@ -99,9 +103,11 @@ The second endpoint allows you to return the pressure timeseries at one specific
 | :--- | :--- | :--- |
 | `lon` | `number` | **Required**. longitude coordinate. -180° to 180°. |
 | `lat` | `number` | **Required**. latitude coordinate. 0° to 90°. |
-| `startTime` | `number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of start (i.e., number of second since 1-janv-1970.  |
-| `endTime` | `number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of end (i.e., number of second since 1-janv-1970.  |
-| `pressure` | `array of number` | Atmospheric pressure of the geolocator. |
+| `pressure` | `array of number` | geolocator pressure. |
+| `time` | `array of number` | **Required if pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.   |
+| `startTime` | `number` | **Required if NOT pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of start (i.e., number of second since 1-janv-1970.  |
+| `endTime` | `number` | **Required if NOT pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of end (i.e., number of second since 1-janv-1970.  |
+| `format` | `string` | *default: `'csv'`*. Format in which to return the timeseries (`csv` or `json`)  |
 
 
 ## Responses
@@ -111,18 +117,15 @@ See example for response structure.
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `status` | `success` or `error` | |
-| `task_id` | `number` | Task ID. Use this ID for communication if you have any problem. |
-| `labels` | `array of string/number` | List of unique labels. Same order than urls. |
-| `urls` | `array of string` | List of the mismatch urls. |
-| `resolution` | `number` | resolution in degree. Same resolution for lattitude and longitude. |
-| `size` | `array of number` | Number of pixel of the map.|
-| `bbox` | `Object` | Bounding box requested. |
+| `taskID` | `number` | Task ID. Use this ID for communication if you have any problem. |
+| `url` | `string` | urls of the response timeseries |
+| `format` | `csv` or `json` | format to the timeseries. |
 
 
 ## Example
 Request
 ```http
-GET /glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=&endTime=
+GET /glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
 ```
 Response:
 ```javascript
@@ -130,11 +133,8 @@ Response:
   "status" : success,
   "task_id" : 1639259414,
   "data"    : 
-    labels: [1],
     urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
-    resolution: 0.25,
-    size: [136 188],
-    bbox: {w:-18, S:4, E:16, N:51},
+    format: 'csv'
   }
 }
 ```
