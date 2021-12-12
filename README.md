@@ -39,11 +39,12 @@ The time resolution of the ERA-5 is 1 hours. The API will compute the match for 
 | `S` | `number` | **Required**. South coordinate. 0° to 90°. |
 | `E` | `number` | **Required**. East coordinate. -180° to 180°. |
 | `N` | `number` | **Required**. North coordinate. 0° to 90°. |
-| `scale` | `number` | (*default=10*) Number of pixel per latitude, longitude. 10 for a resultion of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
+| `scale` | `number` | (*default=10*). Number of pixel per latitude, longitude. 10 for a resultion of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
 | `pressure` | `array of number` | **Required**. Atmospheric pressure to match in Pascal. |
 | `time` | `array of number` | **Required**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.   |
 | `label` | `array of string/number` | **Required**. Define the grouping of the pressure data. All pressure with the same label will be match together |
-
+| `maxSample` | `number` | (*default=250*). The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeserie.  |
+| `margin` | `number` | (*default=30*). The margin is used in the threadhold map to accept some measurement error. unit in meter. (1hPa~10m) |
 
 ## Responses
 
@@ -52,12 +53,14 @@ See example for response structure.
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `status` | `success` or `error` | |
-| `task_id` | `number` | Task ID. Use this ID for communication if you have any problem. |
+| `taskId` | `number` | Task ID. Use this ID for communication if you have any problem. |
 | `labels` | `array of string/number` | List of unique labels. Same order than urls. |
 | `urls` | `array of string` | List of the mismatch urls. |
 | `resolution` | `number` | resolution in degree. Same resolution for lattitude and longitude. |
 | `size` | `array of number` | Number of pixel of the map.|
 | `bbox` | `Object` | Bounding box requested. |
+| `errorMesage` | `string` | In case `status==error`, `errorMessage` provides the reason for the error |
+| `advice` | `string` | In case `status==error`, `advice` provides guidance on how to solve the problem |
 
 
 ## Example
