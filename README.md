@@ -107,7 +107,6 @@ The timeserie of the response will be on the same as `time` if supply, otherwise
 | `time` | `array of number` | **Required if pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of the pressure data (i.e., number of second since 1-janv-1970.   |
 | `startTime` | `number` | **Required if NOT pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of start (i.e., number of second since 1-janv-1970.  |
 | `endTime` | `number` | **Required if NOT pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of end (i.e., number of second since 1-janv-1970.  |
-| `format` | `string` | *default: `'csv'`*. Format in which to return the timeseries (`csv` or `json`)  |
 
 
 ## Responses
@@ -119,7 +118,6 @@ See example for response structure.
 | `status` | `success` or `error` | |
 | `taskId` | `number` | Task ID. Use this ID for communication if you have any problem. |
 | `url` | `string` | urls of the response timeseries |
-| `format` | `csv` or `json` | format to the timeseries. |
 
 
 ## Example
