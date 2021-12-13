@@ -117,7 +117,7 @@ See example for response structure.
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `status` | `success` or `error` | |
-| `taskID` | `number` | Task ID. Use this ID for communication if you have any problem. |
+| `taskId` | `number` | Task ID. Use this ID for communication if you have any problem. |
 | `url` | `string` | urls of the response timeseries |
 | `format` | `csv` or `json` | format to the timeseries. |
 
