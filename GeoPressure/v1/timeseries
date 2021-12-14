@@ -1,0 +1,123 @@
+#!/usr/bin/python3
+import math
+import cgi
+form = cgi.FieldStorage()
+import json
+import datetime
+import os
+
+timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
+with open("logs/{}.log".format(timeStamp), 'w') as f:
+  data={};
+  for key in list(form.keys()):
+    data[key]=form.getvalue(key);
+  f.write(json.JSONEncoder().encode(data))
+
+
+def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs'):
+# import cgitb; cgitb.enable()
+# print('Status: 403 Forbidden\n')
+  print("Content-type: application/json\n")
+  print(json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}))
+  exit()
+
+if('lon' not in form or 'lat' not in form ):
+  printErrorMessage(timeStamp,'lon and lat are mendatory!')
+
+try:
+  lon=float(form.getvalue("lon"));
+except:
+  printErrorMessage(timeStamp,'lon is not a float number');
+
+try:
+  lat=float(form.getvalue("lat"));
+except:
+  printErrorMessage(timeStamp,'lat is not a float number');
+
+informedTimeSeries=False;
+if('time' in form and 'pressure' in form):
+  informedTimeSeries=True;
+else:
+  if 'startTime' not in form or 'endTime' not in form :
+    printErrorMessage(timeStamp,'startTime and endTime OR time and pressure arrays are mendatory!')
+
+if(informedTimeSeries):
+  time=json.JSONDecoder().decode(form.getvalue("time"));
+  pressure=json.JSONDecoder().decode(form.getvalue("pressure"));
+else:
+  try:
+    timeStart=int(form.getvalue("startTime"));
+  except:
+    printErrorMessage(timeStamp,'startTime is not a int number');
+
+  try:
+    timeEnd=int(form.getvalue("endTime"));
+  except:
+    printErrorMessage(timeStamp,'endTime is not a int number');
+
+  timeStart=timeStart*1000;
+  timeEnd=timeEnd*1000;
+
+try:
+  import ee 
+  
+  service_account = os.environ['GEE_API_ADDRESS'];
+  credentials = ee.ServiceAccountCredentials(service_account, '../gee-api-key.json')
+  ee.Initialize(credentials)
+
+  def reduce2aPixel(im):
+    return im.addBands(ee.Image.constant(ee.Number(im.get('system:time_start')).divide(1000)).rename('time').toLong()).sample(region=ee.Geometry.Point([lon, lat]), scale=10, numPixels=1);
+
+  def boundingTimeCollection(timeStart,timeEnd):
+    ERA5_pressur=ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(timeStart,timeEnd).select(['surface_pressure'],['pressure']);
+    fc=ERA5_pressur.map(reduce2aPixel).flatten()
+    url=ee.FeatureCollection(fc).getDownloadURL(selectors=['time','pressure'])
+    return url;
+
+  def expliciteTimeCollection(time,pressure):
+    def makeFeature(li):
+      li=ee.List(li);
+      return ee.Feature(None,{'system:time_start':ee.Number(li.get(0)).multiply(1000),'pressure':li.get(1)})
+
+    val=ee.List([time, pressure]).unzip();
+    fc=ee.FeatureCollection(val.map(makeFeature));
+
+    start=fc.aggregate_min('system:time_start');
+    end=fc.aggregate_max('system:time_start');
+    ERA5=ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+
+    ERA5_pressur=ERA5.filterDate(start,ee.Date(end).advance(1,'hour')).select(['surface_pressure','temperature_2m']);
+
+    era5_llabelFeature=ee.Join.saveBest(matchKey='bestERA5',measureKey='diff').apply(fc,ERA5_pressur,ee.Filter.maxDifference(3600*1000,leftField='system:time_start',  rightField='system:time_start' ));
+
+    def getAltitude(ft):
+      #standard temperature lapse rate [K/m] = -0.0065 [K/m]
+      Lb = -0.0065;
+      #universal gas constant = 8.31432 [N * m / mol /K]
+      R = 8.31432;
+      #gravitational acceleration constant = 9.80665 [m/s^2]
+      g0 = 9.80665;
+      #molar mass of Earth s air = 0.0289644 [kg/mol]
+      M = 0.0289644;
+      #standard temperature (temperature at sea level) [K]
+      T0 = 273.15+15;
+
+      altIm=ee.Image('projects/earthimages4unil/PostDocProjects/rafnuss/Geopot_ERA5');
+      dh = ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(ee.Image.constant(ee.Number(ft.get('pressure'))).divide(ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1)).add(altIm).rename('altitude');
+      return dh.addBands(ee.Image(ft.get('bestERA5')).select('surface_pressure').rename('pressure')).addBands(ee.Image.constant(ee.Number(ft.get('system:time_start'))).rename('time').divide(1000).toLong()).sample(region=ee.Geometry.Point([lon, lat]), scale=10, numPixels=1);
+
+    agregatedMap=ee.FeatureCollection(era5_llabelFeature.map(getAltitude)).flatten();
+    url=agregatedMap.getDownloadURL(selectors=['time','pressure','altitude'])
+    return url;
+
+
+  if informedTimeSeries:
+    url=expliciteTimeCollection(time,pressure);
+  else:
+    url=boundingTimeCollection(timeStart,timeEnd);
+
+  dic = {'status':'success', 'taskID':timeStamp,'data':{'format':'csv','url':url}};
+  print("Content-type: application/json\n")
+  print(json.JSONEncoder().encode(dic))
+except Exception as e:
+  printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".format(timeStamp));

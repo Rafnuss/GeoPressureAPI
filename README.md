@@ -46,7 +46,7 @@ The time resolution of the ERA-5 is 1 hours. The API will compute the match for 
 | `maxSample` | `number` | *default: `250`*. The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeserie.  |
 | `margin` | `number` | *default: `30`*. The margin is used in the threadhold map to accept some measurement error. unit in meter. (1hPa~10m) |
 
-## Responses
+### Responses
 
 See example for response structure.
 
@@ -63,7 +63,7 @@ See example for response structure.
 | `advice` | `string` | In case `status==error`, `advice` provides guidance on how to solve the problem |
 
 
-## Example
+### Example
 Request
 ```http
 GET /glp.mgravey.com/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
@@ -109,7 +109,7 @@ The timeserie of the response will be on the same as `time` if supply, otherwise
 | `endTime` | `number` | **Required if NOT pressure**. [UNIX time](https://en.wikipedia.org/wiki/Unix_time) of end (i.e., number of second since 1-janv-1970.  |
 
 
-## Responses
+### Responses
 
 See example for response structure.
 
@@ -120,7 +120,7 @@ See example for response structure.
 | `url` | `string` | urls of the response timeseries |
 
 
-## Example
+### Example
 Request
 ```http
 GET /glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
@@ -135,4 +135,23 @@ Response:
     format: 'csv'
   }
 }
+```
+
+## Installation
+
+To install the server:
+1. Clone this repository in a folder X.
+2. Add the jsonfile with the key in the same X folder.
+3. Update bootServer.sh with the appropriate service address.
+4. Make service executable
+```bash
+chmod +x GeoPressure/v1/*
+```
+5. Add a route to the server if needed (the default port is 24853
+```bash
+sudo iptables -t nat -A PREROUTING -p tcp --dport 24853 -j REDIRECT --to-port 24853
+```
+6. Run the server
+```bash
+bash bootServer.sh
 ```
