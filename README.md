@@ -17,19 +17,17 @@ GET /glp.mgravey.com/GeoPressure/v1/map/
 
 With this end-point, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
 
-**Input**
 The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See request for details.
 
-**Ouput**
 We return a maps with two layers.
-1. The [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) between the input pressure timeseries and the reanalysis one at each location, 
-2. The proportion of datapoint of the input pressure timeseries corresponding to altitude value within the min and max altitude found in each grid cell. The altitude value is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temperature variation from ERA5 data (2m-temperature). The min and max altitude of each pixel is computed from the [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
+1. The mismatch between the input pressure timeseries and the reanalysis one at each location. This is computed with a [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) where the mean error is removed. The mean error is removed because we assume no specific altitude of the geolocator, thus allowing an altitudinal shift of the pressure timeserie.
+2. The proportion of datapoint of the input pressure timeseries corresponding to altitude value which fall within the min and max ground elevation found at each location. The altitude value of the geolocator pressure timeseries is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temporal variation of pressure (surface-pressure) and temperature (2m-temperature) based on ERA5 data. The min and max ground elevation of each pixel is computed from [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
 
-To get these map, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the geotiff of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
+To get these map, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the `geotiff` of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
 
 The time range available to query is the same as ERA5-Land data, which is from 1981 to three months from real-time. More information can be found at the [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land) and the [the corresponding Google Earth Engine dataset](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_HOURLY#description).
 
-The time resolution of the ERA-5 is 1 hours. The API will compute the match for any timestamp provided in the request by using the closest 1 hours. To avoid redundant information, downscale the timeserie to 1 hour before the request. 
+The time resolution of the ERA5-Land is 1 hours. The API will compute the match for any timestamp provided in the request by using the closest 1 hours. To avoid redundant information, downscale the timeserie to 1 hour before the request. 
 
 ### Request
 
@@ -62,6 +60,10 @@ See example for response structure.
 | `errorMesage` | `string` | In case `status==error`, `errorMessage` provides the reason for the error |
 | `advice` | `string` | In case `status==error`, `advice` provides guidance on how to solve the problem |
 
+### URL content
+
+Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTIFF) with the two bands/layers described in [Description](#description).
+
 
 ### Example
 Request
@@ -91,9 +93,9 @@ Response:
 GET /glp.mgravey.com/GeoPressure/v1/timeseries/
 ```
 ### Description
-The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA-5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
+The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
 
-If you supply the `pressure` (and `time`) of the geolocator, it will additionally return the elevation of the geolocator.
+If you supply the `pressure` (and `time`) of the geolocator, it will additionally return the altitude of the geolocator.
 
 The timeserie of the response will be on the same as `time` if supply, otherwise, it will return on a hourly basis between `startTime` and `endTime`.
 
@@ -119,6 +121,12 @@ See example for response structure.
 | `taskId` | `number` | Task ID. Use this ID for communication if you have any problem. |
 | `url` | `string` | urls of the response timeseries |
 
+
+### URL content
+
+The url will with return a `csv` the the following columns:
+| date | pressure | altitude |
+| :--- | :--- | :--- |
 
 ### Example
 Request
