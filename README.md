@@ -23,7 +23,7 @@ The input parameters are the labeled pressure timeseries (time, pressure, label)
 **Ouput**
 We return a maps with two layers.
 1. The [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) between the input pressure timeseries and the reanalysis one at each location, 
-2. A mask of whether the altitude equivalent to the pressure measurement is within the min and max altitude found in each grid cell. The altitude equivalent is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temperature variation from ERA5 data. The min and max altitude of each pixel is computed from the [SRTM-30](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
+2. A mask of whether the altitude equivalent to the pressure measurement is within the min and max altitude found in each grid cell. The altitude equivalent is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temperature variation from ERA5 data. The min and max altitude of each pixel is computed from the [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
 
 To get these map, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the geotiff of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
 
