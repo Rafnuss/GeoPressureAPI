@@ -1,10 +1,10 @@
-# GeoPressureServer
+# GeoPressureAPI
 
 ## Introduction
 
-GeoPressureServer is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with the atmospheric pressure from [ERA5-LAND reanalysis data](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land).
+GeoPressureAPI is a JSON API that makes it easy to compute the mismatch of a geolocator pressure timeserie with the atmospheric pressure from [ERA5-LAND reanalysis data](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land).
 
-This docs describe how to use the GeoPressure API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureServer/issues/new) if you see anything missing.
+This docs describe how to use the GeoPressure API. We hope you enjoy these docs, and please don't hesitate to [file an issue](https://github.com/Rafnuss/GeoPressureAPI/issues/new) if you see anything missing.
 
 
 ## Pressure map
@@ -150,7 +150,7 @@ Response:
 To install the server:
 1. Clone this repository.
 ```bash
-git clone https://github.com/Rafnuss/GeoPressureServer
+git clone https://github.com/Rafnuss/GeoPressureAPI
 ```
 2. Add the `json` file with the key in the repository.
 3. Update `bootServer.sh` with the appropriate service address.
