@@ -131,7 +131,7 @@ The url will with return a `csv` the the following columns:
 ### Example
 Request
 ```http
-GET /glp.mgravey.com/GeoPressure:24853/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
+GET /glp.mgravey.com:24853/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
 ```
 Response:
 ```javascript
