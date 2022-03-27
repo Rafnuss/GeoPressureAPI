@@ -133,7 +133,7 @@ def getMSE_Map(time, pressure, label, W, S, E, N, sclaeFcator=10, mode='full',ma
 		# if(ee.Number(start).lt(ERA5_stat.get('min')).Or(ee.Number(end).gt(ERA5_stat.get('max'))).getInfo()):
 		# 	printErrorMessage(timeStamp,'Some requested times are not in the available ERA5 reanalysis.');
 
-		ERA5_pressur=ERA5.filterDate(start,ee.Date(end).advance(1,'hour')).select(['surface_pressure','temperature_2m']);
+		ERA5_pressur=ERA5.filterDate(ee.Date(start).advance(-1,'hour'),ee.Date(end).advance(1,'hour')).select(['surface_pressure','temperature_2m']);
 
 		era5_llabelFeature=ee.Join.saveBest(matchKey='bestERA5',measureKey='diff').apply(labelFeature,ERA5_pressur,ee.Filter.maxDifference(3600*1000,leftField='system:time_start',  rightField='system:time_start' ));
 
