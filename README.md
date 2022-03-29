@@ -130,6 +130,7 @@ The url will with return a `csv` the the following columns:
 
 | date | pressure | altitude |
 | :--- | :--- | :--- |
+| ... | ... | ... |
 
 ### Example
 Request
