@@ -156,10 +156,7 @@ git clone https://github.com/Rafnuss/GeoPressureAPI
 ```
 2. Add the `json` file with the key in the repository.
 3. Update `bootServer.sh` with the appropriate service address.
-4. Make service executable with
-```bash
-chmod +x GeoPressure/v1/*
-```
+4. Create a `logs` folder 
 5. Add a route to the server if needed (the default port is 24853)
 ```bash
 sudo iptables -t nat -A PREROUTING -p tcp --dport 24853 -j REDIRECT --to-port 24853
