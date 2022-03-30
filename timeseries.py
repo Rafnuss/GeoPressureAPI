@@ -14,12 +14,13 @@ def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the input
 
 class GP_timeseries_v1(GEE_Service):
 
-	def reduce2aPixel(self,im,coordinates):
-		return im.addBands(self.ee.Image.constant(self.ee.Number(im.get('system:time_start')).divide(1000)).rename('time').toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=10, numPixels=1);
+	
 
 	def boundingTimeCollection(self,timeStart,timeEnd,coordinates):
-		ERA5_pressur=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(timeStart,ee.Date(timeEnd).advance(1,'hour')).select(['surface_pressure'],['pressure']);
-		fc=ERA5_pressur.map(self.reduce2aPixel,coordinates).flatten()
+		def reduce2aPixel(im):
+			return im.addBands(self.ee.Image.constant(self.ee.Number(im.get('system:time_start')).divide(1000)).rename('time').toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=10, numPixels=1);
+		ERA5_pressur=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(timeStart,self.ee.Date(timeEnd).advance(1,'hour')).select(['surface_pressure'],['pressure']);
+		fc=ERA5_pressur.map(reduce2aPixel).flatten()
 		url=self.ee.FeatureCollection(fc).getDownloadURL(selectors=['time','pressure'])
 		return url;
 
@@ -68,12 +69,18 @@ class GP_timeseries_v1(GEE_Service):
 			return printErrorMessage(timeStamp,'lon and lat are mendatory!')
 
 		try:
-			lon=float(form["lon"][0]);
+			if isinstance(form["lon"], list):
+				lon=float(form["lon"][0]);
+			else:
+				lon=float(form["lon"]);
 		except:
 			return printErrorMessage(timeStamp,'lon is not a float number');
 
 		try:
-			lat=float(form["lat"][0]);
+			if isinstance(form["lat"], list):
+				lat=float(form["lat"][0]);
+			else:
+				lat=float(form["lat"]);
 		except:
 			return printErrorMessage(timeStamp,'lat is not a float number');
 
@@ -89,14 +96,20 @@ class GP_timeseries_v1(GEE_Service):
 			pressure=json.JSONDecoder().decode(form["pressure"][0]);
 		else:
 			try:
-				timeStart=int(form["startTime"][0]);
+				if isinstance(form["startTime"], list):
+					timeStart=int(form["startTime"][0]);
+				else:
+					timeStart=int(form["startTime"]);
 			except:
-				printErrorMessage(timeStamp,'startTime is not a int number');
+				return printErrorMessage(timeStamp,'startTime is not a int number');
 
 			try:
-				timeEnd=int(form["endTime"][0]);
+				if isinstance(form["endTime"], list):
+					timeEnd=int(form["endTime"][0]);
+				else:
+					timeEnd=int(form["endTime"]);
 			except:
-				printErrorMessage(timeStamp,'endTime is not a int number');
+				return printErrorMessage(timeStamp,'endTime is not a int number');
 
 			timeStart=timeStart*1000;
 			timeEnd=timeEnd*1000;

@@ -30,7 +30,7 @@ class GEE_Handler (SimpleHTTPRequestHandler):
         queryDic = parse_qs(parsedUrl.query)
         obj={}
         for key in queryDic.keys():
-        	obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
+            obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
         self.GEE_service(parsedUrl.path, queryDic,'GET');
 
     def do_POST(self):
@@ -50,13 +50,14 @@ class GEE_Handler (SimpleHTTPRequestHandler):
         if(service in self.dictionaryApp.keys()):
             status,hearders,val=self.dictionaryApp[service].singleRequest(queryDic,requestType)        
         self.send_response(status)
-        self.end_headers()
+        
         for key in hearders.keys():
             try:
                 self.send_header(key, hearders[key]);
                 pass
             except Exception as e:
                 print(e);
+        self.end_headers()
         self.wfile.write(val.encode('utf-8'))
 
 class GEE_server (http.server.HTTPServer):

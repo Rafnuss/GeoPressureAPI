@@ -108,22 +108,34 @@ class GP_map_v1(GEE_Service):
 			return printErrorMessage(timeStamp,'time, pressure and label are mendatory!')
 
 		try:
-			W=float(form["W"][0]);
+			if isinstance(form["W"], list):
+				W=float(form["W"][0]);
+			else:
+				W=float(form["W"]);
 		except:
 			return printErrorMessage(timeStamp,'W is not a float number');
 
 		try:
-			S=float(form["S"][0]);
+			if isinstance(form["S"], list):
+				S=float(form["S"][0]);
+			else:
+				S=float(form["S"]);
 		except:
 			return printErrorMessage(timeStamp,'S is not a float number');
 
 		try:
-			E=float(form["E"][0]);
+			if isinstance(form["E"], list):
+				E=float(form["E"][0]);
+			else:
+				E=float(form["E"]);
 		except:
 			return printErrorMessage(timeStamp,'E is not a float number');
 
 		try:
-			N=float(form["N"][0]);
+			if isinstance(form["N"], list):
+				N=float(form["N"][0]);
+			else:
+				N=float(form["N"]);
 		except:
 			return printErrorMessage(timeStamp,'N is not a float number');
 
@@ -133,27 +145,39 @@ class GP_map_v1(GEE_Service):
 		scale=10;
 		if 'scale' in form.keys():
 			try:
-				scale=float(form["scale"][0]);
+				if isinstance(form["scale"], list):
+					scale=float(form["scale"][0]);
+				else:
+					scale=float(form["scale"]);
 			except:
 				return printErrorMessage(timeStamp,'scale should be a number');return 
 
 		maxSample=250;
 		if 'maxSample' in form.keys():
 			try:
-				maxSample=int(form["maxSample"][0]);
+				if isinstance(form["maxSample"], list):
+					maxSample=int(form["maxSample"][0]);
+				else:
+					maxSample=int(form["maxSample"]);
 			except:
 				return printErrorMessage(timeStamp,'maxSample should be a number');
 
 		margin=30;
 		if 'margin' in form.keys():
 			try:
-			  margin=float(form["margin"][0]);
+				if isinstance(form["margin"], list):
+					margin=float(form["margin"][0]);
+				else:
+					margin=float(form["margin"]);
 			except:
 			  return printErrorMessage(timeStamp,'margin is not a float number');
 
 		mode='full;'
 		if 'mode' in form.keys():
-			mode=form["mode"][0];
+			if isinstance(form["mode"], list):
+				mode=form["mode"][0];
+			else:
+				mode=form["mode"];
 
 		sizeLon=(E-W)*scale;
 		sizeLat=(N-S)*scale;
