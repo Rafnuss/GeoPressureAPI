@@ -60,6 +60,22 @@ class GP_timeseries_v1(GEE_Service):
 		url=agregatedMap.getDownloadURL(selectors=['time','pressure','altitude'])
 		return url;
 
+	def checkPosition(self,coordinates):
+		lon,lat=coordinates;
+		print(lon,lat)
+		ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+		land=ERA5.first().select(0).mask();
+		radius=1000000;
+		geometry=self.ee.Geometry.Point(coordinates);
+		isLand=list(land.reduceRegion(self.ee.Reducer.first(),geometry,1).getInfo().values())[0];
+		if(not isLand):
+			land=land.focalMin(1,'circle','pixels')
+			aoi=self.ee.FeatureCollection(self.ee.Feature(geometry)).distance(radius).addBands(self.ee.Image.pixelLonLat()).updateMask(land);
+			best=aoi.reduceRegion(self.ee.Reducer.min(3),geometry.buffer(radius),land.geometry().projection().nominalScale().multiply(0.1)).getInfo();
+			return (best['min1'],best['min2'],best['min'],True);
+		else:
+			return (lon, lat,0,False);
+
 	def singleRequest(self, form, requestType):
 		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
 		with open("logs/{}.log".format(timeStamp), 'w') as f:
@@ -120,11 +136,12 @@ class GP_timeseries_v1(GEE_Service):
 			timeEnd=timeEnd*1000;
 
 		try:
+			lon,lat,dist,change=self.checkPosition([lon, lat]);
 			if informedTimeSeries:
 				url=self.expliciteTimeCollection(time,pressure,[lon, lat]);
 			else:
 				url=self.boundingTimeCollection(timeStart,timeEnd,[lon, lat]);
-			dic = {'status':'success', 'taskID':timeStamp,'data':{'format':'csv','url':url}};
+			dic = {'status':'success', 'taskID':timeStamp,'data':{'format':'csv','url':url,'lon':lon,'lat':lat,'distInter':dist}};
 			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
 		except Exception as e:
 			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".format(timeStamp));
