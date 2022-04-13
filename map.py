@@ -62,7 +62,7 @@ class GP_map_v1(GEE_Service):
 
 			def getError(ft):
 				error=self.ee.Image(ft.get('bestERA5')).select('surface_pressure').subtract(meanMapPressure).subtract(self.ee.Number(ft.get('pressure')).subtract(presureMeanSesnor)).toFloat();
-				altIm=self.ee.Image('projects/earthimages4unil/PostDocProjects/rafnuss/min_max_elevation');
+				altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/min_max_elevation');
 				dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1));
 				isPossible=dh.gte(altIm.select('elevation_min').add(-margin)).And(dh.lte(altIm.select('elevation_max').add(margin))).toFloat();
 				return error.multiply(error).addBands(isPossible).rename(['error','isPossible']);
@@ -189,9 +189,16 @@ class GP_map_v1(GEE_Service):
 			return printErrorMessage(timeStamp,'(N-S)*scale should be an integer');
 
 
-		time=json.JSONDecoder().decode(form["time"][0]);
-		pressure=json.JSONDecoder().decode(form["pressure"][0]);
-		label=json.JSONDecoder().decode(form["label"][0]);
+		time=form["time"];
+		pressure=form["pressure"];
+		label=form["label"];
+
+		if(isinstance(time[0], str)):
+			time=json.JSONDecoder().decode(time[0])
+		if(isinstance(pressure[0], str)):
+			pressure=json.JSONDecoder().decode(pressure[0])
+		if(isinstance(label[0], str)):
+			label=json.JSONDecoder().decode(label[0])
 
 
 		if(len(time)!=len(pressure) or len(time)!=len(label)):
