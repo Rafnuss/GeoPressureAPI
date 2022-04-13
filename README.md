@@ -97,9 +97,9 @@ GET /glp.mgravey.com:24853/GeoPressure/v1/timeseries/
 ### Description
 The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
 
-If you supply the `pressure` (and `time`) of the geolocator, it will additionally return the altitude of the geolocator.
+If you supply the `pressure` (and `time`) of the geolocator, it will additionally return the `altitude` of the geolocator (above sea level).
 
-The timeserie of the response will be on the same as `time` if supply, otherwise, it will return on a hourly basis between `startTime` and `endTime`.
+The timeserie of the response will be the same as `time` if supply, otherwise, it will return on a hourly basis between `startTime` and `endTime`.
 
 When requesting a position on water, it will move the position to the shortest point on land. The response will include `distInter >0 ` and the exact coordinates used in the computation.
 
@@ -134,7 +134,7 @@ See example for response structure.
 
 The url will with return a `csv` the the following columns:
 
-| date | pressure | altitude |
+| date | pressure | (altitude) |
 | :--- | :--- | :--- |
 | ... | ... | ... |
 
