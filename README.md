@@ -101,6 +101,8 @@ If you supply the `pressure` (and `time`) of the geolocator, it will additionall
 
 The timeserie of the response will be on the same as `time` if supply, otherwise, it will return on a hourly basis between `startTime` and `endTime`.
 
+When requesting a position on water, it will move the position to the shortest point on land. The response will include `distInter >0 ` and the exact coordinates used in the computation.
+
 ### Request
 
 | Parameter | Type | Description |
@@ -119,9 +121,13 @@ See example for response structure.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `status` | `success` or `error` | |
-| `taskId` | `number` | Task ID. Use this ID for communication if you have any problem. |
-| `url` | `string` | urls of the response timeseries |
+| `status`    | `success` or `error` | |
+| `taskId`    | `number` | Task ID. Use this ID for communication if you have any problem. |
+| `url`       | `string` | urls of the response timeseries |
+| `distInter` | `number` | Distance interpolated from the requested coordinate to the one used. meters. |
+| `lon`       | `number` | longitude coordinate used (different than requested if over water). |
+| `lat`       | `number` | latitude coordinateu sed (different than requested if over water). |
+
 
 
 ### URL content
