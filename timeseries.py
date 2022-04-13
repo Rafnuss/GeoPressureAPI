@@ -52,7 +52,7 @@ class GP_timeseries_v1(GEE_Service):
 			#standard temperature (temperature at sea level) [K]
 			T0 = 273.15+15;
 
-			altIm=self.ee.Image('projects/earthimages4unil/PostDocProjects/rafnuss/Geopot_ERA5');
+			altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5');
 			dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1)).add(altIm).rename('altitude');
 			return dh.addBands(self.ee.Image(ft.get('bestERA5')).select('surface_pressure').rename('pressure')).addBands(self.ee.Image.constant(self.ee.Number(ft.get('system:time_start'))).rename('time').divide(1000).toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=10, numPixels=1);
 
@@ -92,8 +92,13 @@ class GP_timeseries_v1(GEE_Service):
 				return printErrorMessage(timeStamp,'startTime and endTime OR time and pressure arrays are mendatory!')
 
 		if(informedTimeSeries):
-			time=json.JSONDecoder().decode(form["time"][0]);
-			pressure=json.JSONDecoder().decode(form["pressure"][0]);
+			time=form["time"];
+			pressure=form["pressure"];
+			if(isinstance(time[0], str)):
+				time=json.JSONDecoder().decode(time[0])
+			if(isinstance(pressure[0], str)):
+				pressure=json.JSONDecoder().decode(pressure[0])
+
 		else:
 			try:
 				if isinstance(form["startTime"], list):

@@ -26,22 +26,28 @@ class GEE_Handler (SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        parsedUrl=urlparse(self.path);
-        queryDic = parse_qs(parsedUrl.query)
-        obj={}
-        for key in queryDic.keys():
-            obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
-        self.GEE_service(parsedUrl.path, queryDic,'GET');
+        try:
+            parsedUrl=urlparse(self.path);
+            queryDic = parse_qs(parsedUrl.query)
+            obj={}
+            for key in queryDic.keys():
+                obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
+            self.GEE_service(parsedUrl.path, queryDic,'GET');
+        except:
+            self.catastrophicError();
 
     def do_POST(self):
-        parsedUrl=urlparse(self.path);
-        length = int(self.headers['Content-Length']);
-        field_data = self.rfile.read(length);
-        queryDic = parse_qs(field_data.decode('utf-8'));
-        obj={}
-        for key in queryDic.keys():
-            obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
-        self.GEE_service(parsedUrl.path, obj,'POST');
+        try:
+            parsedUrl=urlparse(self.path);
+            length = int(self.headers['Content-Length']);
+            field_data = self.rfile.read(length);
+            queryDic = parse_qs(field_data.decode('utf-8'));
+            obj={}
+            for key in queryDic.keys():
+                obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
+            self.GEE_service(parsedUrl.path, obj,'POST');
+        except:
+            self.catastrophicError();
 
     def GEE_service(self,service, queryDic, requestType):
         status=404
@@ -59,6 +65,11 @@ class GEE_Handler (SimpleHTTPRequestHandler):
                 print(e);
         self.end_headers()
         self.wfile.write(val.encode('utf-8'))
+
+    def catastrophicError(self):
+        self.send_response(500)
+        self.end_headers()
+        self.wfile.write("Catastrophic Error (:".encode('utf-8'))
 
 class GEE_server (http.server.HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, dictionaryApp):
