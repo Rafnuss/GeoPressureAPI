@@ -54,7 +54,7 @@ class GP_timeseries_v1(GEE_Service):
 
 			altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5');
 			dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1)).add(altIm).rename('altitude');
-			return dh.addBands(self.ee.Image(ft.get('bestERA5')).select('surface_pressure').rename('pressure')).addBands(self.ee.Image.constant(self.ee.Number(ft.get('system:time_start'))).rename('time').divide(1000).toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=10, numPixels=1);
+			return dh.addBands(self.ee.Image(ft.get('bestERA5')).select('surface_pressure').rename('pressure')).addBands(self.ee.Image.constant(self.ee.Number(ft.get('system:time_start'))).rename('time').divide(1000).toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=1, numPixels=1);
 
 		agregatedMap=self.ee.FeatureCollection(era5_llabelFeature.map(getAltitude)).flatten();
 		url=agregatedMap.getDownloadURL(selectors=['time','pressure','altitude'])
@@ -62,12 +62,11 @@ class GP_timeseries_v1(GEE_Service):
 
 	def checkPosition(self,coordinates):
 		lon,lat=coordinates;
-		print(lon,lat)
 		ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
 		land=ERA5.first().select(0).mask();
 		radius=1000000;
 		geometry=self.ee.Geometry.Point(coordinates);
-		isLand=list(land.reduceRegion(self.ee.Reducer.first(),geometry,1).getInfo().values())[0];
+		isLand=list(land.sample(region=geometry, scale=1, numPixels=1).getInfo().values())[0];
 		if(not isLand):
 			land=land.focalMin(1,'circle','pixels')
 			aoi=self.ee.FeatureCollection(self.ee.Feature(geometry)).distance(radius).addBands(self.ee.Image.pixelLonLat()).updateMask(land);
