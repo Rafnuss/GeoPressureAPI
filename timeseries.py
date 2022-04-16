@@ -66,7 +66,7 @@ class GP_timeseries_v1(GEE_Service):
 		land=ERA5.first().select(0).mask();
 		radius=1000000;
 		geometry=self.ee.Geometry.Point(coordinates);
-		isLand=list(land.sample(region=geometry, scale=1, numPixels=1).getInfo().values())[0];
+		isLand=land.sample(region=geometry, scale=1, numPixels=1).first().get('dewpoint_temperature_2m').getInfo();
 		if(not isLand):
 			land=land.focalMin(1,'circle','pixels')
 			aoi=self.ee.FeatureCollection(self.ee.Feature(geometry)).distance(radius).addBands(self.ee.Image.pixelLonLat()).updateMask(land);
