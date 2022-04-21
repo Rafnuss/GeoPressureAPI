@@ -63,14 +63,14 @@ class GP_timeseries_v1(GEE_Service):
 	def checkPosition(self,coordinates):
 		lon,lat=coordinates;
 		ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
-		land=ERA5.first().select(0).mask();
+		land=ERA5.first().select('surface_pressure').mask();
 		radius=1000000;
 		geometry=self.ee.Geometry.Point(coordinates);
-		isLand=land.sample(region=geometry, scale=1, numPixels=1).first().get('dewpoint_temperature_2m').getInfo();
+		isLand=land.sample(region=geometry, scale=1, numPixels=1).first().get('surface_pressure').getInfo();
 		if(not isLand):
 			land=land.focalMin(1,'circle','pixels')
 			aoi=self.ee.FeatureCollection(self.ee.Feature(geometry)).distance(radius).addBands(self.ee.Image.pixelLonLat()).updateMask(land);
-			best=aoi.reduceRegion(self.ee.Reducer.min(3),geometry.buffer(radius),land.geometry().projection().nominalScale().multiply(0.1)).getInfo();
+			best=aoi.reduceRegion(self.ee.Reducer.min(3),geometry.buffer(radius),land.geometry().projection().nominalScale().multiply(0.05)).getInfo();
 			return (best['min1'],best['min2'],best['min'],True);
 		else:
 			return (lon, lat,0,False);
