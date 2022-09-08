@@ -27,6 +27,9 @@ class GP_map_v1(GEE_Service):
 
 		listLabel=fc.aggregate_array('label').distinct();
 
+		ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+		endERA5=ERA5.filterDate('2022','2100').aggregate_max('system:time_start').getInfo();
+
 		def runMSEmatch(labelFeature):
 
 			#standard temperature lapse rate [K/m] = -0.0065 [K/m]
@@ -45,14 +48,16 @@ class GP_map_v1(GEE_Service):
 			presureMeanSesnor=labelFeature.aggregate_mean('pressure');
 			start=labelFeature.aggregate_min('system:time_start');
 			end=labelFeature.aggregate_max('system:time_start');
-			ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+			
 
-			# ERA5_stat=ERA5.aggregate_stats('system:time_start');
-			# if(self.ee.Number(start).lt(ERA5_stat.get('min')).Or(self.ee.Number(end).gt(ERA5_stat.get('max'))).getInfo()):
-			# 	printErrorMessage(timeStamp,'Some requested times are not in the available ERA5 reanalysis.');
+			ERA5_stat=ERA5.aggregate_stats('system:time_start');
+			if(self.ee.Number(end).gt(endERA5).getInfo()):
+				return None;
 
 			ERA5_pressur=ERA5.filterDate(self.ee.Date(start).advance(-1,'hour'),self.ee.Date(end).advance(1,'hour')).select(['surface_pressure','temperature_2m']);
 
+			# if(ERA5_pressur.size().getInfo()<1):
+			# 	return None;
 			era5_llabelFeature=self.ee.Join.saveBest(matchKey='bestERA5',measureKey='diff').apply(labelFeature,ERA5_pressur,self.ee.Filter.maxDifference(3600*1000,leftField='system:time_start',  rightField='system:time_start' ));
 
 			def getpresurMap(ft):
@@ -82,7 +87,11 @@ class GP_map_v1(GEE_Service):
 		urls={}
 
 		for label in listLabel_py:
-				urls[label]=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label))).getDownloadURL({"name":'label',"dimensions":[(E-W)*sclaeFcator, (N-S)*sclaeFcator],"format":"GEO_TIFF", "region":self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N)});# ZIPPED_GEO_TIFF
+				im=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label)));
+				if im:
+					urls[label]=im.getDownloadURL({"name":'label',"dimensions":boxSize,"format":"GEO_TIFF", "region":self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N)});# ZIPPED_GEO_TIFF
+				else:
+					urls[label]=None;
 
 		return {'format':'GEOTIFF',
 				'labels':listLabel_py,
@@ -182,12 +191,14 @@ class GP_map_v1(GEE_Service):
 		sizeLon=(E-W)*scale;
 		sizeLat=(N-S)*scale;
 
-		if sizeLon!=math.floor(sizeLon):
+		if math.fabs(sizeLon-round(sizeLon))>0.001:
 			return printErrorMessage(timeStamp,'(E-W)*scale should be an integer');
 
-		if sizeLat!=math.floor(sizeLat):
+		if math.fabs(sizeLat-round(sizeLat))>0.001:
 			return printErrorMessage(timeStamp,'(N-S)*scale should be an integer');
 
+		sizeLon=round(sizeLon);
+		sizeLat=round(sizeLat);
 
 		time=form["time"];
 		pressure=form["pressure"];
