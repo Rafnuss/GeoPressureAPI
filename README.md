@@ -168,6 +168,7 @@ git clone https://github.com/Rafnuss/GeoPressureAPI
 5. Add a route to the server if needed
 ```bash
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 80
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 443
 ```
 6. Run the server
 ```bash
