@@ -12,7 +12,7 @@ This docs describe how to use the GeoPressure API. We hope you enjoy these docs,
 ## Pressure map
 
 ```http
-GET /glp.mgravey.com:24853/GeoPressure/v1/map/
+GET /glp.mgravey.com/GeoPressure/v1/map/
 ```
 
 ### Description
@@ -70,7 +70,7 @@ Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTI
 ### Example
 Request
 ```http
-GET /glp.mgravey.com:24853/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
+GET /glp.mgravey.com/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
 ```
 Response:
 ```javascript
@@ -92,7 +92,7 @@ Response:
 
 ## Pressure timeseries
 ```http
-GET /glp.mgravey.com:24853/GeoPressure/v1/timeseries/
+GET /glp.mgravey.com/GeoPressure/v1/timeseries/
 ```
 ### Description
 The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visualy the match of the geolocator pressure with the ERA5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
@@ -141,7 +141,7 @@ The url will with return a `csv` the the following columns:
 ### Example
 Request
 ```http
-GET /glp.mgravey.com:24853/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
+GET /glp.mgravey.com:80/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
 ```
 Response:
 ```javascript
@@ -165,9 +165,9 @@ git clone https://github.com/Rafnuss/GeoPressureAPI
 2. Add the `json` file with the key in the repository.
 3. Update `bootServer.sh` with the appropriate service address.
 4. Create a `logs` folder 
-5. Add a route to the server if needed (the default port is 24853)
+5. Add a route to the server if needed
 ```bash
-sudo iptables -t nat -A PREROUTING -p tcp --dport 24853 -j REDIRECT --to-port 24853
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 80
 ```
 6. Run the server
 ```bash
