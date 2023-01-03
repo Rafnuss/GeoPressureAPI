@@ -13,6 +13,7 @@ def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the input
     return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
 
 class GP_map_v1(GEE_Service):
+	
 	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, mode='full',maxSample=250,margin=30):
 		
 		def makeFeature(li):

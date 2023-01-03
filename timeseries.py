@@ -14,8 +14,6 @@ def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the input
 
 class GP_timeseries_v1(GEE_Service):
 
-	
-
 	def boundingTimeCollection(self,timeStart,timeEnd,coordinates):
 		def reduce2aPixel(im):
 			return im.addBands(self.ee.Image.constant(self.ee.Number(im.get('system:time_start')).divide(1000)).rename('time').toLong()).sample(region=self.ee.Geometry.Point(coordinates), scale=10, numPixels=1);
