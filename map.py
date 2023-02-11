@@ -111,6 +111,9 @@ class GP_map_v1(GEE_Service):
 		with open("logs/{}.log".format(timeStamp), 'w') as f:
 			f.write(json.JSONEncoder().encode(form))
 		
+		if len(form.keys())<1 :
+			return printErrorMessage(timeStamp,'form is empty! did you send it as json my accident? ')
+
 		if 'W' not in form.keys() or 'S' not in form.keys() or 'E' not in form.keys() or 'N' not in form.keys() :
 			return printErrorMessage(timeStamp,'W, S, E or N are missing the bounding box is mandatory. ')
 
@@ -204,14 +207,6 @@ class GP_map_v1(GEE_Service):
 		time=form["time"];
 		pressure=form["pressure"];
 		label=form["label"];
-
-		if(isinstance(time[0], str)):
-			time=json.JSONDecoder().decode(time[0])
-		if(isinstance(pressure[0], str)):
-			pressure=json.JSONDecoder().decode(pressure[0])
-		if(isinstance(label[0], str)):
-			label=json.JSONDecoder().decode(label[0])
-
 
 		if(len(time)!=len(pressure) or len(time)!=len(label)):
 			return printErrorMessage(timeStamp,'presure time and label need to have the same length. ');
