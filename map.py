@@ -9,7 +9,7 @@ import asyncio
 
 from GEE_API_server import GEE_Service
 
-def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs'):
+def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs. '):
     return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
 
 class GP_map_v1(GEE_Service):
@@ -112,10 +112,10 @@ class GP_map_v1(GEE_Service):
 			f.write(json.JSONEncoder().encode(form))
 		
 		if 'W' not in form.keys() or 'S' not in form.keys() or 'E' not in form.keys() or 'N' not in form.keys() :
-			return printErrorMessage(timeStamp,'W,S,E or N is missing the bounding box is mendatory!')
+			return printErrorMessage(timeStamp,'W, S, E or N are missing the bounding box is mandatory. ')
 
 		if('time' not in form.keys() or 'pressure' not in form.keys() or 'label' not in form.keys()):
-			return printErrorMessage(timeStamp,'time, pressure and label are mendatory!')
+			return printErrorMessage(timeStamp,'time, pressure and label are mandatory. ')
 
 		try:
 			if isinstance(form["W"], list):
@@ -123,7 +123,7 @@ class GP_map_v1(GEE_Service):
 			else:
 				W=float(form["W"]);
 		except:
-			return printErrorMessage(timeStamp,'W is not a float number');
+			return printErrorMessage(timeStamp,'W is not a float number. ');
 
 		try:
 			if isinstance(form["S"], list):
@@ -131,7 +131,7 @@ class GP_map_v1(GEE_Service):
 			else:
 				S=float(form["S"]);
 		except:
-			return printErrorMessage(timeStamp,'S is not a float number');
+			return printErrorMessage(timeStamp,'S is not a float number. ');
 
 		try:
 			if isinstance(form["E"], list):
@@ -139,7 +139,7 @@ class GP_map_v1(GEE_Service):
 			else:
 				E=float(form["E"]);
 		except:
-			return printErrorMessage(timeStamp,'E is not a float number');
+			return printErrorMessage(timeStamp,'E is not a float number. ');
 
 		try:
 			if isinstance(form["N"], list):
@@ -147,7 +147,7 @@ class GP_map_v1(GEE_Service):
 			else:
 				N=float(form["N"]);
 		except:
-			return printErrorMessage(timeStamp,'N is not a float number');
+			return printErrorMessage(timeStamp,'N is not a float number. ');
 
 
 
@@ -160,7 +160,7 @@ class GP_map_v1(GEE_Service):
 				else:
 					scale=float(form["scale"]);
 			except:
-				return printErrorMessage(timeStamp,'scale should be a number');return 
+				return printErrorMessage(timeStamp,'scale should be a number. ');return 
 
 		maxSample=250;
 		if 'maxSample' in form.keys():
@@ -170,7 +170,7 @@ class GP_map_v1(GEE_Service):
 				else:
 					maxSample=int(form["maxSample"]);
 			except:
-				return printErrorMessage(timeStamp,'maxSample should be a number');
+				return printErrorMessage(timeStamp,'maxSample should be a number. ');
 
 		margin=30;
 		if 'margin' in form.keys():
@@ -180,7 +180,7 @@ class GP_map_v1(GEE_Service):
 				else:
 					margin=float(form["margin"]);
 			except:
-			  return printErrorMessage(timeStamp,'margin is not a float number');
+			  return printErrorMessage(timeStamp,'margin is not a float number. ');
 
 		mode='full;'
 		if 'mode' in form.keys():
@@ -193,10 +193,10 @@ class GP_map_v1(GEE_Service):
 		sizeLat=(N-S)*scale;
 
 		if math.fabs(sizeLon-round(sizeLon))>0.001:
-			return printErrorMessage(timeStamp,'(E-W)*scale should be an integer');
+			return printErrorMessage(timeStamp,'(E-W)*scale should be an integer. ');
 
 		if math.fabs(sizeLat-round(sizeLat))>0.001:
-			return printErrorMessage(timeStamp,'(N-S)*scale should be an integer');
+			return printErrorMessage(timeStamp,'(N-S)*scale should be an integer. ');
 
 		sizeLon=round(sizeLon);
 		sizeLat=round(sizeLat);
@@ -214,7 +214,7 @@ class GP_map_v1(GEE_Service):
 
 
 		if(len(time)!=len(pressure) or len(time)!=len(label)):
-			return printErrorMessage(timeStamp,'presure time and label need to have the same length!');
+			return printErrorMessage(timeStamp,'presure time and label need to have the same length. ');
 
 		try:
 			dic = self.getMSE_Map(time, pressure, label,W,S,E,N,[sizeLon, sizeLat], scale,mode,maxSample,margin);
