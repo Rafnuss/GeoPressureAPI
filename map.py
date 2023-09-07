@@ -83,13 +83,15 @@ class GP_map_v2(GEE_Service):
 				isPossible=dh.gte(altIm.select('elevation_min').add(-margin)).And(dh.lte(altIm.select('elevation_max').add(margin))).toFloat();
 				return error.multiply(error).addBands(isPossible).rename(['mse','probAlt']);
 
-			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean().updateMask(ERA5_pressur.first().mask())
+			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean()
 			
 			if(maskThreashold>0):
 				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreashold)),None,True);
 				
 			if not includeMask:
 				agregatedMap=agregatedMap.select('mse')
+
+			agregatedMap=agregatedMap.updateMask(ERA5_pressur.first().mask())
 
 			return agregatedMap.set('label',labelFeature.get('label'))
 
