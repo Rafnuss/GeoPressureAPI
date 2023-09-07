@@ -1,20 +1,38 @@
 #!/usr/local/bin/python3
 import math
 import cgi
-form = cgi.FieldStorage()
+jsonObj = cgi.FieldStorage()
 import json
 import datetime
 import os
 import asyncio
+import numpy
+import time as tm
+from apscheduler.schedulers.background import BackgroundScheduler
+from concurrent.futures import ThreadPoolExecutor
 
 from GEE_API_server import GEE_Service
 
-def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs. '):
-    return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
 
-class GP_map_v1(GEE_Service):
+
+def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs. '):
+	return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
+
+class GP_map_v2(GEE_Service):
+
+	def __init__(self,service_account, apiKeyFile, highvolume=False ):
+		super(GP_map_v2, self).__init__(service_account, apiKeyFile, highvolume)
+		self.endERA5=1;
+		self.endERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate('2022','2100').aggregate_max('system:time_start').getInfo();
+
+		self.ERA5Scheduler = BackgroundScheduler()
+		self.ERA5Scheduler.add_job(self.updateERA5, 'interval', hours=1)
+		self.ERA5Scheduler.start()
+
+	def updateERA5():
+		self.endERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(self.endERA5-1,'2100').aggregate_max('system:time_start').getInfo();
 	
-	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, mode='full',maxSample=250,margin=30):
+	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.9):
 		
 		def makeFeature(li):
 			li=self.ee.List(li);
@@ -27,9 +45,6 @@ class GP_map_v1(GEE_Service):
 			return self.ee.Feature(None,{'label':labelId});
 
 		listLabel=fc.aggregate_array('label').distinct();
-
-		ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
-		endERA5=ERA5.filterDate('2022','2100').aggregate_max('system:time_start').getInfo();
 
 		def runMSEmatch(labelFeature):
 
@@ -50,15 +65,10 @@ class GP_map_v1(GEE_Service):
 			start=labelFeature.aggregate_min('system:time_start');
 			end=labelFeature.aggregate_max('system:time_start');
 			
-
-			ERA5_stat=ERA5.aggregate_stats('system:time_start');
-			if(self.ee.Number(end).gt(endERA5).getInfo()):
-				return None;
+			ERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
 
 			ERA5_pressur=ERA5.filterDate(self.ee.Date(start).advance(-1,'hour'),self.ee.Date(end).advance(1,'hour')).select(['surface_pressure','temperature_2m']);
 
-			# if(ERA5_pressur.size().getInfo()<1):
-			# 	return None;
 			era5_llabelFeature=self.ee.Join.saveBest(matchKey='bestERA5',measureKey='diff').apply(labelFeature,ERA5_pressur,self.ee.Filter.maxDifference(3600*1000,leftField='system:time_start',  rightField='system:time_start' ));
 
 			def getpresurMap(ft):
@@ -71,15 +81,16 @@ class GP_map_v1(GEE_Service):
 				altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/min_max_elevation');
 				dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1));
 				isPossible=dh.gte(altIm.select('elevation_min').add(-margin)).And(dh.lte(altIm.select('elevation_max').add(margin))).toFloat();
-				return error.multiply(error).addBands(isPossible).rename(['error','isPossible']);
+				return error.multiply(error).addBands(isPossible).rename(['mse','probAlt']);
 
 			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean().updateMask(ERA5_pressur.first().mask())
-			if 'full' not in mode:
-				agregatedMap=agregatedMap.updateMask(agregatedMap.select('isPossible').gte(0.90)); # I hardcode 90% you can change if you want
-			if 'redcued' in mode:
-				agregatedMap=agregatedMap.select('error')
-
-			#agregatedMap=agregatedMap.addBands(agregatedMap.mask());
+			
+			if(maskThreashold>0):
+				agregatedMap=agregatedMap.updateMask(agregatedMap.select('probAlt').gte(maskThreashold));
+				agregatedMap.addBands(agregatedMap.select('probAlt').unmask(0)).updateMask(ERA5_pressur.first().mask())
+				
+			if not includeMask:
+				agregatedMap=agregatedMap.select('mse')
 
 			return agregatedMap.set('label',labelFeature.get('label'))
 
@@ -87,110 +98,103 @@ class GP_map_v1(GEE_Service):
 		listLabel_py=list(set(label));# maybe less robust, but clearly much faster
 		urls={}
 
+		ims={}
 		for label in listLabel_py:
-				im=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label)));
-				if im:
-					urls[label]=im.getDownloadURL({"name":'label',"dimensions":boxSize,"format":"GEO_TIFF", "region":self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N)});# ZIPPED_GEO_TIFF
-				else:
-					urls[label]=None;
+			print(label)
+			ims[label]=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label)));
+
+		bbox=self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N);
+
+		def getEEUrl(label):
+			start_time = tm.time()
+			print("download", label)
+			if ims[label]:
+				urls[label] = ims[label].getDownloadURL({"name": 'label', "dimensions": boxSize, "jsonObjat": "GEO_TIFF", "region": bbox})
+			else:
+				urls[label] = None
+			end_time = tm.time()
+			print("Got", label)
+
+		start_time = tm.time()
+		with ThreadPoolExecutor(max_workers=25) as executor:
+			executor.map(getEEUrl, listLabel_py)
+		end_time = tm.time()
 
 		return {'format':'GEOTIFF',
 				'labels':listLabel_py,
 				'urls':[urls[label] for label in listLabel_py],
 				'resolution':1/sclaeFcator,
 				'bbox':{'W':W,'S':S,'E':E,'N':N},
-				'size':boxSize
+				'size':boxSize,
+				'time2GetUrls':end_time-start_time,
+				'includeMask':includeMask,
+				'maskThreashold':maskThreashold
 				}
 
-
-
-
-	def singleRequest(self, form, requestType):
-
-		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
-		with open("logs/{}.log".format(timeStamp), 'w') as f:
-			f.write(json.JSONEncoder().encode(form))
+	def singleRequest(self, jsonObj, requestType):
 		
-		if len(form.keys())<1 :
-			return printErrorMessage(timeStamp,'form is empty! did you send it as json my accident? ')
+		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
+		
+		with open("logs/{}.log".format(timeStamp), 'w') as f:
+			f.write(json.JSONEncoder().encode(jsonObj))
+		
+		if len(jsonObj.keys())<1 :
+			return printErrorMessage(timeStamp,'jsonObj is empty! did you send it as json my accident? ')
 
-		if 'W' not in form.keys() or 'S' not in form.keys() or 'E' not in form.keys() or 'N' not in form.keys() :
+		if 'W' not in jsonObj.keys() or 'S' not in jsonObj.keys() or 'E' not in jsonObj.keys() or 'N' not in jsonObj.keys() :
 			return printErrorMessage(timeStamp,'W, S, E or N are missing the bounding box is mandatory. ')
 
-		if('time' not in form.keys() or 'pressure' not in form.keys() or 'label' not in form.keys()):
+		if('time' not in jsonObj.keys() or 'pressure' not in jsonObj.keys() or 'label' not in jsonObj.keys()):
 			return printErrorMessage(timeStamp,'time, pressure and label are mandatory. ')
-
+		
 		try:
-			if isinstance(form["W"], list):
-				W=float(form["W"][0]);
-			else:
-				W=float(form["W"]);
+			W=float(jsonObj["W"]);
 		except:
 			return printErrorMessage(timeStamp,'W is not a float number. ');
 
 		try:
-			if isinstance(form["S"], list):
-				S=float(form["S"][0]);
-			else:
-				S=float(form["S"]);
+			S=float(jsonObj["S"]);
 		except:
 			return printErrorMessage(timeStamp,'S is not a float number. ');
 
 		try:
-			if isinstance(form["E"], list):
-				E=float(form["E"][0]);
-			else:
-				E=float(form["E"]);
+			E=float(jsonObj["E"]);
 		except:
 			return printErrorMessage(timeStamp,'E is not a float number. ');
 
 		try:
-			if isinstance(form["N"], list):
-				N=float(form["N"][0]);
-			else:
-				N=float(form["N"]);
+			N=float(jsonObj["N"]);
 		except:
 			return printErrorMessage(timeStamp,'N is not a float number. ');
 
-
-
-
 		scale=10;
-		if 'scale' in form.keys():
+		if 'scale' in jsonObj.keys():
 			try:
-				if isinstance(form["scale"], list):
-					scale=float(form["scale"][0]);
-				else:
-					scale=float(form["scale"]);
+				scale=float(jsonObj["scale"]);
 			except:
 				return printErrorMessage(timeStamp,'scale should be a number. ');return 
 
 		maxSample=250;
-		if 'maxSample' in form.keys():
+		if 'maxSample' in jsonObj.keys():
 			try:
-				if isinstance(form["maxSample"], list):
-					maxSample=int(form["maxSample"][0]);
-				else:
-					maxSample=int(form["maxSample"]);
+				maxSample=int(jsonObj["maxSample"]);
 			except:
 				return printErrorMessage(timeStamp,'maxSample should be a number. ');
 
 		margin=30;
-		if 'margin' in form.keys():
+		if 'margin' in jsonObj.keys():
 			try:
-				if isinstance(form["margin"], list):
-					margin=float(form["margin"][0]);
-				else:
-					margin=float(form["margin"]);
+				margin=float(jsonObj["margin"]);
 			except:
 			  return printErrorMessage(timeStamp,'margin is not a float number. ');
 
-		mode='full;'
-		if 'mode' in form.keys():
-			if isinstance(form["mode"], list):
-				mode=form["mode"][0];
-			else:
-				mode=form["mode"];
+		includeMask=True
+		if 'includeMask' in jsonObj.keys():
+			includeMask=jsonObj["includeMask"];
+
+		maskThreashold=0.9
+		if 'maskThreashold' in jsonObj.keys():
+			maskThreashold=jsonObj["maskThreashold"];
 
 		sizeLon=(E-W)*scale;
 		sizeLat=(N-S)*scale;
@@ -204,25 +208,18 @@ class GP_map_v1(GEE_Service):
 		sizeLon=round(sizeLon);
 		sizeLat=round(sizeLat);
 
-		time=form["time"];
-		pressure=form["pressure"];
-		label=form["label"];
-
-		if(requestType=='GET'):
-			if(isinstance(time[0], str)):
-				time=json.JSONDecoder().decode(time[0])
-			if(isinstance(pressure[0], str)):
-				pressure=json.JSONDecoder().decode(pressure[0])
-			if(isinstance(label[0], str)):
-				label=json.JSONDecoder().decode(label[0])
-
+		time=jsonObj["time"];
+		pressure=jsonObj["pressure"];
+		label=jsonObj["label"];
 
 		if(len(time)!=len(pressure) or len(time)!=len(label)):
 			return printErrorMessage(timeStamp,'presure time and label need to have the same length. ');
 
 		try:
-			dic = self.getMSE_Map(time, pressure, label,W,S,E,N,[sizeLon, sizeLat], scale,mode,maxSample,margin);
+			if(numpy.array(time).max()*1000>self.endERA5):
+				return (416,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':timeStamp,'errorMesage':"ERA-5 data not available from {}. Request only pressure with earlier date.".jsonObjat(datetime.datetime.utcfromtimestamp(self.endERA5/1000)),"lastERA5":self.endERA5}));
+			dic = self.getMSE_Map(time, pressure, label, W, S, E, N, [sizeLon, sizeLat], scale, includeMask, maxSample, margin, maskThreashold);
 			dic = {'status':'success', 'taskID':timeStamp,'data':dic};
 			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
 		except Exception as e:
-			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".format(timeStamp));
+			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".jsonObjat(timeStamp));

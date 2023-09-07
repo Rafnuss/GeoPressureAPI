@@ -12,7 +12,7 @@ from GEE_API_server import GEE_Service
 def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs'):
 		return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
 
-class GP_timeseries_v1(GEE_Service):
+class GP_timeseries_v2(GEE_Service):
 
 	def boundingTimeCollection(self,timeStart,timeEnd,coordinates):
 		def reduce2aPixel(im):
@@ -73,59 +73,43 @@ class GP_timeseries_v1(GEE_Service):
 		else:
 			return (lon, lat,0,False);
 
-	def singleRequest(self, form, requestType):
+	def singleRequest(self, jsonObj, requestType):
 		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
 		with open("logs/{}.log".format(timeStamp), 'w') as f:
-			f.write(json.JSONEncoder().encode(form))
+			f.write(json.JSONEncoder().encode(jsonObj))
 		
-		if('lon' not in form.keys() or 'lat' not in form.keys() ):
+		if('lon' not in jsonObj.keys() or 'lat' not in jsonObj.keys() ):
 			return printErrorMessage(timeStamp,'lon and lat are mendatory!')
 
 		try:
-			if isinstance(form["lon"], list):
-				lon=float(form["lon"][0]);
-			else:
-				lon=float(form["lon"]);
+			lon=float(jsonObj["lon"]);
 		except:
 			return printErrorMessage(timeStamp,'lon is not a float number');
 
 		try:
-			if isinstance(form["lat"], list):
-				lat=float(form["lat"][0]);
-			else:
-				lat=float(form["lat"]);
+			lat=float(jsonObj["lat"]);
 		except:
 			return printErrorMessage(timeStamp,'lat is not a float number');
 
 		informedTimeSeries=False;
-		if('time' in form.keys() and 'pressure' in form.keys()):
+		if('time' in jsonObj.keys() and 'pressure' in jsonObj.keys()):
 			informedTimeSeries=True;
 		else:
-			if 'startTime' not in form.keys() or 'endTime' not in form.keys() :
+			if 'startTime' not in jsonObj.keys() or 'endTime' not in jsonObj.keys() :
 				return printErrorMessage(timeStamp,'startTime and endTime OR time and pressure arrays are mendatory!')
 
 		if(informedTimeSeries):
-			time=form["time"];
-			pressure=form["pressure"];
-			if(isinstance(time[0], str)):
-				time=json.JSONDecoder().decode(time[0])
-			if(isinstance(pressure[0], str)):
-				pressure=json.JSONDecoder().decode(pressure[0])
+			time=jsonObj["time"];
+			pressure=jsonObj["pressure"];
 
 		else:
 			try:
-				if isinstance(form["startTime"], list):
-					timeStart=int(form["startTime"][0]);
-				else:
-					timeStart=int(form["startTime"]);
+				timeStart=int(jsonObj["startTime"]);
 			except:
 				return printErrorMessage(timeStamp,'startTime is not a int number');
 
 			try:
-				if isinstance(form["endTime"], list):
-					timeEnd=int(form["endTime"][0]);
-				else:
-					timeEnd=int(form["endTime"]);
+				timeEnd=int(jsonObj["endTime"]);
 			except:
 				return printErrorMessage(timeStamp,'endTime is not a int number');
 

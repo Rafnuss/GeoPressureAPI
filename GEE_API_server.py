@@ -27,34 +27,29 @@ class GEE_Handler (SimpleHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            parsedUrl=urlparse(self.path);
-            queryDic = parse_qs(parsedUrl.query)
-            obj={}
-            for key in queryDic.keys():
-                obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
-            self.GEE_service(parsedUrl.path, queryDic,'GET');
+            self.notJSON();
         except:
             self.catastrophicError();
 
     def do_POST(self):
         try:
             parsedUrl=urlparse(self.path);
+            content_type = self.headers['Content-Type']
+            if(content_type not in  'application/json'):
+                self.notJSON()
             length = int(self.headers['Content-Length']);
             field_data = self.rfile.read(length);
-            queryDic = parse_qs(field_data.decode('utf-8'));
-            obj={}
-            for key in queryDic.keys():
-                obj[key]=json.JSONDecoder().decode(queryDic[key][0]);
-            self.GEE_service(parsedUrl.path, obj,'POST');
+            jsonObj = json.loads(field_data.decode('utf-8'))
+            self.GEE_service(parsedUrl.path, jsonObj,'POST');
         except:
             self.catastrophicError();
 
-    def GEE_service(self,service, queryDic, requestType):
+    def GEE_service(self,service, jsonObj, requestType):
         status=404
         hearders={}
         val='';
         if(service in self.dictionaryApp.keys()):
-            status,hearders,val=self.dictionaryApp[service].singleRequest(queryDic,requestType)        
+            status,hearders,val=self.dictionaryApp[service].singleRequest(jsonObj,requestType)        
         self.send_response(status)
         
         for key in hearders.keys():
@@ -70,6 +65,11 @@ class GEE_Handler (SimpleHTTPRequestHandler):
         self.send_response(500)
         self.end_headers()
         self.wfile.write("Catastrophic Error :(".encode('utf-8'))
+
+    def notJSON(self):
+        self.send_response(500)
+        self.end_headers()
+        self.wfile.write("Your input must be in JSON format over a POST request. It appears you're using API V2. If you intended to use API V1 (which is no longer maintained), you may do so. However, we strongly recommend using a PSOT request with JSON on the API V2 for better support".encode('utf-8'))
 
 class GEE_server (http.server.HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, dictionaryApp):
