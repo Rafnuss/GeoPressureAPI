@@ -86,12 +86,12 @@ class GP_map_v2(GEE_Service):
 			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean()
 			
 			if(maskThreshold>0):
-				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreshold)),None,True);
+				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreshold)).unmask(-1),None,True);
 				
 			if not includeMask:
 				agregatedMap=agregatedMap.select('mse')
 
-			agregatedMap=agregatedMap.updateMask(ERA5_pressur.first().mask())
+			agregatedMap=agregatedMap.updateMask(ERA5_pressur.first().mask()).unmask(-2)
 
 			return agregatedMap.set('label',labelFeature.get('label'))
 
