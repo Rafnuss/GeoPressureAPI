@@ -19,11 +19,13 @@ POST /glp.mgravey.com/GeoPressure/v2/map/
 
 With this end-point, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
 
-The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See request for details.
+The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See below for details.
 
-We return a map with two layers.
-1. The mismatch between the input pressure timeseries and the reanalysis one at each location. This is computed with a [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) where the mean error is removed. The mean error is removed because we assume no specific altitude of the geolocator, thus allowing an altitudinal shift of the pressure timeseries.
-2. The proportion of datapoint of the input pressure timeseries corresponding to altitude value which fall within the min and max ground elevation found at each location. The altitude value of the geolocator pressure timeseries is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temporal variation of pressure (surface-pressure) and temperature (2m-temperature) based on ERA5 data. The min and max ground elevation of each pixel is computed from [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
+We return a geotiff map with one or two layers.
+1. **mse**: The first layer is the mismatch between the input pressure timeseries and the reanalysis one at each location. This is computed with a [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) where the mean error is removed. The mean error is removed because we assume no specific altitude of the geolocator, thus allowing an altitudinal shift of the pressure timeseries.
+2.  **mask**: (optional) The second layer quantifies how often the pressure timeseries corresponds to altitude falling within the min and max ground elevation found in each pixel of the map. For instance, a pixel with a value of 0.9 indicates that for 90% of the timeseries, the bird was found on an elevation which exists in the range of altitude found in that pixel. The altitude value of the geolocator pressure timeseries is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temporal variation of pressure (surface-pressure) and temperature (2m-temperature) based on ERA5 data. The min and max ground elevation of each pixel is computed from [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4). In addition, you can use the `margin` parameter to account for possible errors in pressure and vertical movement of the bird. It define a range of pressure error acceptable where the bird is still considered to be on the ground. You can not return this layer using the `includeMask` paramaters. 
+
+In order to save computational time, you can use the `maskThreshold` parameter which will filter the mask layer and only keep pixel with a mask value above the threashold for the rest of the computation. This means that the mse layer is only computed for these pixels. 
 
 To get these maps, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the `geotiff` of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
 
@@ -69,7 +71,7 @@ See example for response structure.
 
 ### URL content
 
-Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTIFF) with the two bands/layers described in [Description](#description).
+Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTIFF) with one or two bands/layers: **mse** and optionally the **mask**. Pixels not covered by the data (i.e., water) are indecated with a value of `-2`, while pixels with a **mse** below `maskThreashold` are indicated with a `-1` in the **mse**.
 
 
 #### API Endpoint
