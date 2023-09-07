@@ -91,7 +91,7 @@ class GP_map_v2(GEE_Service):
 			if not includeMask:
 				agregatedMap=agregatedMap.select('mse')
 
-			agregatedMap=agregatedMap.updateMask(ERA5_pressur.first().mask()).unmask(-2)
+			agregatedMap=agregatedMap.updateMask(ERA5_pressur.first().select(0).mask()).unmask(-2)
 
 			return agregatedMap.set('label',labelFeature.get('label'))
 
