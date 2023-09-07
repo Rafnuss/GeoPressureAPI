@@ -32,7 +32,7 @@ class GP_map_v2(GEE_Service):
 	def updateERA5():
 		self.endERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(self.endERA5-1,'2100').aggregate_max('system:time_start').getInfo();
 	
-	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.0):
+	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.9):
 		
 		def makeFeature(li):
 			li=self.ee.List(li);
@@ -86,8 +86,7 @@ class GP_map_v2(GEE_Service):
 			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean().updateMask(ERA5_pressur.first().mask())
 			
 			if(maskThreashold>0):
-				agregatedMap=agregatedMap.updateMask(agregatedMap.select('probAlt').gte(maskThreashold));
-				agregatedMap.addBands(agregatedMap.select('probAlt').unmask(0)).updateMask(ERA5_pressur.first().mask())
+				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreashold)));
 				
 			if not includeMask:
 				agregatedMap=agregatedMap.select('mse')
@@ -100,20 +99,17 @@ class GP_map_v2(GEE_Service):
 
 		ims={}
 		for label in listLabel_py:
-			print(label)
 			ims[label]=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label)));
 
 		bbox=self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N);
 
 		def getEEUrl(label):
 			start_time = tm.time()
-			print("download", label)
 			if ims[label]:
-				urls[label] = ims[label].getDownloadURL({"name": 'label', "dimensions": boxSize, "jsonObjat": "GEO_TIFF", "region": bbox})
+				urls[label] = ims[label].getDownloadURL({"name": 'label', "dimensions": boxSize, "format": "GEO_TIFF", "region": bbox})
 			else:
 				urls[label] = None
 			end_time = tm.time()
-			print("Got", label)
 
 		start_time = tm.time()
 		with ThreadPoolExecutor(max_workers=25) as executor:
@@ -192,7 +188,7 @@ class GP_map_v2(GEE_Service):
 		if 'includeMask' in jsonObj.keys():
 			includeMask=jsonObj["includeMask"];
 
-		maskThreashold=0
+		maskThreashold=0.9
 		if 'maskThreashold' in jsonObj.keys():
 			maskThreashold=jsonObj["maskThreashold"];
 
