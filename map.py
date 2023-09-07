@@ -32,7 +32,7 @@ class GP_map_v2(GEE_Service):
 	def updateERA5():
 		self.endERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(self.endERA5-1,'2100').aggregate_max('system:time_start').getInfo();
 	
-	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.9):
+	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreshold=0.9):
 		
 		def makeFeature(li):
 			li=self.ee.List(li);
@@ -85,8 +85,8 @@ class GP_map_v2(GEE_Service):
 
 			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean()
 			
-			if(maskThreashold>0):
-				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreashold)),None,True);
+			if(maskThreshold>0):
+				agregatedMap=agregatedMap.addBands(agregatedMap.select('mse').updateMask(agregatedMap.select('probAlt').gte(maskThreshold)),None,True);
 				
 			if not includeMask:
 				agregatedMap=agregatedMap.select('mse')
@@ -126,7 +126,7 @@ class GP_map_v2(GEE_Service):
 				'size':boxSize,
 				'time2GetUrls':end_time-start_time,
 				'includeMask':includeMask,
-				'maskThreashold':maskThreashold
+				'maskThreshold':maskThreshold
 				}
 
 	def singleRequest(self, jsonObj, requestType):
@@ -190,9 +190,9 @@ class GP_map_v2(GEE_Service):
 		if 'includeMask' in jsonObj.keys():
 			includeMask=jsonObj["includeMask"];
 
-		maskThreashold=0.9
-		if 'maskThreashold' in jsonObj.keys():
-			maskThreashold=jsonObj["maskThreashold"];
+		maskThreshold=0.9
+		if 'maskThreshold' in jsonObj.keys():
+			maskThreshold=jsonObj["maskThreshold"];
 
 		sizeLon=(E-W)*scale;
 		sizeLat=(N-S)*scale;
@@ -216,7 +216,7 @@ class GP_map_v2(GEE_Service):
 		try:
 			if(numpy.array(time).max()*1000>self.endERA5):
 				return (416,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':timeStamp,'errorMesage':"ERA-5 data not available from {}. Request only pressure with earlier date.".jsonObjat(datetime.datetime.utcfromtimestamp(self.endERA5/1000)),"lastERA5":self.endERA5}));
-			dic = self.getMSE_Map(time, pressure, label, W, S, E, N, [sizeLon, sizeLat], scale, includeMask, maxSample, margin, maskThreashold);
+			dic = self.getMSE_Map(time, pressure, label, W, S, E, N, [sizeLon, sizeLat], scale, includeMask, maxSample, margin, maskThreshold);
 			dic = {'status':'success', 'taskID':timeStamp,'data':dic};
 			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
 		except Exception as e:
