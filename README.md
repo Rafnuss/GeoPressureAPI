@@ -46,7 +46,7 @@ The time resolution of the ERA5-Land is 1 hours. The API will compute the match 
 | `maxSample` | `number` | *default: `250`*. The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeserie.  |
 | `margin` | `number` | *default: `30`*. The margin is used in the threadhold map to accept some measurement error. unit in meter. (1hPa~10m) |
 | `includeMask`    | `boolean` | *default: `true`*. Specify if the mask variable should be included in the download. If set to `false`, only the MSE band will be downloaded. |
-| `maskThreshold`  | `float`   | *default: `0.9`*. Provide the threshold value to generate the mask. Values range from 0 to 1. A value of 0 will apply no threshold.|
+| `maskThreshold`  | `float`   | default: 0. A value above 0 will filter the map to only compute the MSE at pixel where the proportion of pressure datapoint are falling at ground level. Typically a value of 0.9 can considerably reduce the computational time by only considering pixel above this threashold.|
 
 
 ### Responses

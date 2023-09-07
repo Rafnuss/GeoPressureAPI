@@ -32,7 +32,7 @@ class GP_map_v2(GEE_Service):
 	def updateERA5():
 		self.endERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(self.endERA5-1,'2100').aggregate_max('system:time_start').getInfo();
 	
-	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.9):
+	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreashold=0.0):
 		
 		def makeFeature(li):
 			li=self.ee.List(li);
@@ -192,7 +192,7 @@ class GP_map_v2(GEE_Service):
 		if 'includeMask' in jsonObj.keys():
 			includeMask=jsonObj["includeMask"];
 
-		maskThreashold=0.9
+		maskThreashold=0
 		if 'maskThreashold' in jsonObj.keys():
 			maskThreashold=jsonObj["maskThreashold"];
 
