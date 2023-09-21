@@ -38,13 +38,11 @@ class GP_map_v2(GEE_Service):
 			li=self.ee.List(li);
 			return self.ee.Feature(None,{'system:time_start':self.ee.Number(li.get(0)).multiply(1000),'pressure':li.get(1),'label':li.get(2)})
 		
-		val=self.ee.List([time, pressure, label]).unzip();
-		fc=self.ee.FeatureCollection(val.map(makeFeature));
+		pyCollection=list(zip(time, pressure, label))
+
 
 		def makeFeatureLabel(labelId):
 			return self.ee.Feature(None,{'label':labelId});
-
-		listLabel=fc.aggregate_array('label').distinct();
 
 		def runMSEmatch(labelFeature):
 
@@ -102,15 +100,16 @@ class GP_map_v2(GEE_Service):
 		ims={}
 
 		def process_label(label):
-		    return label, runMSEmatch(fc.filter(self.ee.Filter.equals('label', label)))
+			fc=self.ee.FeatureCollection(self.ee.List(list(filter(lambda x: x[2] == label, pyCollection))).map(makeFeature));
+			return label, runMSEmatch(fc)
 
 		# Parallel execution
-		with ThreadPoolExecutor(max_workers=max(1,numCores-1)) as executor:
-		    results = executor.map(process_label, listLabel_py)
+		with ThreadPoolExecutor(max_workers=1) as executor:
+			results = executor.map(process_label, listLabel_py)
 
 		# Collect results
 		for label, result in results:
-		    ims[label] = result
+			ims[label] = result
 
 		bbox=self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N);
 
@@ -126,7 +125,7 @@ class GP_map_v2(GEE_Service):
 			end_time = tm.time()
 
 		start_time = tm.time()
-		with ThreadPoolExecutor(max_workers=numCores*5) as executor:
+		with ThreadPoolExecutor(max_workers=numCores*3) as executor:
 			executor.map(getEEUrl, listLabel_py)
 		end_time = tm.time()
 
