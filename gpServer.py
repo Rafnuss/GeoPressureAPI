@@ -17,8 +17,9 @@ print("Serveur actif sur le port :", PORT)
 hightVolumeEndpoint=True;
 
 #["/","/GeoPressure/v1/","/GeoPressure"]
-httpd = server(server_address, handler,{'/GeoPressure/v1/timeseries/':GP_timeseries_v1(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint),
-										'/GeoPressure/v1/map/':GP_map_v1(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint)})
+httpd = server(server_address, handler,{'/GeoPressure/v2/timeseries/':GP_timeseries_v2(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint),
+										'/GeoPressure/v2/map/':GP_map_v2(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint)})
+
 #https is handle by nginx
 httpd.serve_forever()
 

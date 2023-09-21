@@ -2,17 +2,22 @@ name: Test Server
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: '0 */12 * * *'
   workflow_dispatch:
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Test /map
+      - name: Test v2/map
+        run: 'curl -X POST "https://glp.mgravey.com/GeoPressure/v2/map/" -H "Content-Type: application/json" -d ''{"W": -18, "S": 4, "E": 16, "N": 51, "time": [1572075000, 1572076800, 1572078600], "pressure": [97766, 97800, 97833], "label": [1, 1, 1]}'' --max-time 60'
+      - name: Test v2/timeseries with startTime and endTime
+        run: 'curl -X POST "https://glp.mgravey.com/GeoPressure/v2/timeseries/" -H "Content-Type: application/json" -d ''{"lon": 6, "lat": 46, "startTime": 1497916800, "endTime": 1500667800}'' --max-time 60'
+      - name: Test v2/timeseries with pressure timeseries
+        run: 'curl -X POST "https://glp.mgravey.com/GeoPressure/v2/timeseries/" -H "Content-Type: application/json" -d ''{"lon": 6, "lat": 46, "time": [1572075000, 1572076800, 1572078600], "pressure": [97766, 97800, 97833]}'' --max-time 60'
+      - name: Test v1/map
         run: wget "https://glp.mgravey.com/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]" -T 60
-      - name: Test /timeseries with startTime and endTime
+      - name: Test v1/timeseries with startTime and endTime
         run: wget "https://glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800" -T 60
-      - name: Test /timeseries with pressure timeseries
+      - name: Test v1/timeseries with pressure timeseries
         run: wget "https://glp.mgravey.com/GeoPressure/v1/timeseries/?lon=6&lat=46&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]" -T 60

@@ -12,18 +12,20 @@ This docs describe how to use the GeoPressure API. We hope you enjoy these docs,
 ## Pressure map
 
 ```http
-GET /glp.mgravey.com/GeoPressure/v1/map/
+POST /glp.mgravey.com/GeoPressure/v2/map/
 ```
 
 ### Description
 
 With this end-point, you will be able to compute the maps of pressure mismatch from a geolocator pressure timeseries.
 
-The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See request for details.
+The input parameters are the labeled pressure timeseries (time, pressure, label) and the grid (West, South, East, North, scale). See below for details.
 
-We return a map with two layers.
-1. The mismatch between the input pressure timeseries and the reanalysis one at each location. This is computed with a [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) where the mean error is removed. The mean error is removed because we assume no specific altitude of the geolocator, thus allowing an altitudinal shift of the pressure timeseries.
-2. The proportion of datapoint of the input pressure timeseries corresponding to altitude value which fall within the min and max ground elevation found at each location. The altitude value of the geolocator pressure timeseries is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temporal variation of pressure (surface-pressure) and temperature (2m-temperature) based on ERA5 data. The min and max ground elevation of each pixel is computed from [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4).
+We return a geotiff map with one or two layers.
+1. **mse**: The first layer is the mismatch between the input pressure timeseries and the reanalysis one at each location. This is computed with a [mean square error (MSE)](https://en.wikipedia.org/wiki/Mean_squared_error) where the mean error is removed. The mean error is removed because we assume no specific altitude of the geolocator, thus allowing an altitudinal shift of the pressure timeseries.
+2.  **mask**: (optional) The second layer quantifies how often the pressure timeseries corresponds to altitude falling within the min and max ground elevation found in each pixel of the map. For instance, a pixel with a value of 0.9 indicates that for 90% of the timeseries, the bird was found on an elevation which exists in the range of altitude found in that pixel. The altitude value of the geolocator pressure timeseries is computed with [the barometric formula](https://en.wikipedia.org/wiki/Barometric_formula) accounting for the temporal variation of pressure (surface-pressure) and temperature (2m-temperature) based on ERA5 data. The min and max ground elevation of each pixel is computed from [SRTM-90](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4). In addition, you can use the `margin` parameter to account for possible errors in pressure and vertical movement of the bird. It define a range of pressure error acceptable where the bird is still considered to be on the ground. You can not return this layer using the `includeMask` paramaters. 
+
+In order to save computational time, you can use the `maskThreshold` parameter which will filter the mask layer and only keep pixel with a mask value above the threashold for the rest of the computation. This means that the mse layer is only computed for these pixels. 
 
 To get these maps, you first need to call the API which will return a list of urls (one for each unique label). Then, using these urls, you can download the `geotiff` of the output map. Note that the actual calculation is only performed when you request the map (second step), making this step much longer.
 
@@ -45,6 +47,9 @@ The time resolution of the ERA5-Land is 1 hours. The API will compute the match 
 | `label` | `array of string/number` | **Required**. Define the grouping of the pressure data. All pressure with the same label will be match together |
 | `maxSample` | `number` | *default: `250`*. The computation of the mismatch is only performed on `maxSample` datapoints of pressure to reduce computational time. The samples are randomly (uniformly) selected on the timeseries.  |
 | `margin` | `number` | *default: `30`*. The margin is used in the threshold map to accept some measurement error. unit in meter. (1hPa~10m) |
+| `includeMask`    | `boolean` | *default: `true`*. Specify if the mask variable should be included in the download. If set to `false`, only the MSE band will be downloaded. |
+| `maskThreshold`  | `float`   | default: 0. A value above 0 will filter the map to only compute the MSE at pixel where the proportion of pressure datapoint are falling at ground level. Typically a value of 0.9 can considerably reduce the computational time by only considering pixel above this threashold.|
+
 
 ### Responses
 
@@ -59,30 +64,48 @@ See example for response structure.
 | `resolution` | `number` | resolution in degree. Same resolution for latitude and longitude. |
 | `size` | `array of number` | Number of pixel of the map.|
 | `bbox` | `Object` | Bounding box requested. |
+| `includeMask`     | `boolean`| The boolean flag indicating if the mask variable was included.  |
+| `maskThreshold`   | `float`  | The threshold value used to generate the mask.                  |
 | `errorMesage` | `string` | In case `status==error`, `errorMessage` provides the reason for the error |
 | `advice` | `string` | In case `status==error`, `advice` provides guidance on how to solve the problem |
 
 ### URL content
 
-Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTIFF) with the two bands/layers described in [Description](#description).
+Each url will with return a [`geotiff` file](https://en.wikipedia.org/wiki/GeoTIFF) with one or two bands/layers: **mse** and optionally the **mask**. Pixels not covered by the data (i.e., water) are indecated with a value of `-2`, while pixels with a **mse** below `maskThreashold` are indicated with a `-1` in the **mse**.
 
 
-### Example
-Request
+#### API Endpoint
 ```http
-GET /glp.mgravey.com/GeoPressure/v1/map/?W=-18&S=4&E=16&N=51&time=[1572075000,1572076800,1572078600]&pressure=[97766,97800,97833]&label=[1,1,1]
+POST /glp.mgravey.com/GeoPressure/v2/map/
 ```
-Response:
+
+#### Request (POST with JSON body)
+```json
+{
+    "W": -18,
+    "S": 4,
+    "E": 16,
+    "N": 51,
+    "time": [1572075000,1572076800,1572078600],
+    "pressure": [97766,97800,97833],
+    "label": [1,1,1]
+}
+```
+
+#### Response:
 ```javascript
 {
   "status" : success,
   "task_id" : 1639259414,
-  "data"    : 
-    labels: [1],
-    urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
-    resolution: 0.25,
-    size: [136 188],
-    bbox: {w:-18, S:4, E:16, N:51},
+  "data"    : {
+    "labels": [1],
+    "urls": ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
+    "resolution": 0.25,
+    "size": [136 188],
+    "bbox": {w:-18, S:4, E:16, N:51},
+    "time2GetUrls": 11.61416506767273,
+    "includeMask": true,
+    "maskThreshold": 0.9,
   }
 }
 ```
@@ -92,7 +115,7 @@ Response:
 
 ## Pressure timeseries
 ```http
-GET /glp.mgravey.com/GeoPressure/v1/timeseries/
+POST /glp.mgravey.com/GeoPressure/v2/timeseries/
 ```
 ### Description
 The second endpoint allows you to return the pressure timeseries at one specific location. This can be useful to check visually the match of the geolocator pressure with the ERA5 pressure at a specific location (e.g., most likely position according to the response of the endpoint `map`). 
@@ -139,16 +162,27 @@ The url will with return a `csv` the following columns:
 | ... | ... | ... |
 
 ### Example
-Request
+#### API Endpoint
 ```http
-GET /glp.mgravey.com:80/GeoPressure/v1/timeseries/?lon=6&lat=46&startTime=1497916800&endTime=1500667800
+POST /glp.mgravey.com:24853/GeoPressure/v2/timeseries/
 ```
-Response:
+
+#### Request (POST with JSON body)
+```json
+{
+    "lon": 6,
+    "lat": 46,
+    "startTime": 1497916800,
+    "endTime": 1500667800
+}
+```
+
+#### Response:
 ```javascript
 {
   "status" : success,
   "task_id" : 1639259414,
-  "data"    : 
+  "data"    : {
     urls: ['https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/d0f8335cac1ccb4bb27da95ecf7d5718-65cde402d14f88a8a7fcf8256c8793e5:getPixels'],
     format: 'csv'
   }
