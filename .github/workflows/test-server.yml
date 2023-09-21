@@ -15,4 +15,4 @@ jobs:
       - name: Test /timeseries with startTime and endTime
         run: curl -X POST "https://glp.mgravey.com/GeoPressure/v2/timeseries/" -H "Content-Type: application/json" -d '{"lon": 6, "lat": 46, "startTime": 1497916800, "endTime": 1500667800}' --max-time 60
       - name: Test /timeseries with pressure timeseries
-        run: curl -X POST "https://glp.mgravey.com/GeoPressure/v2/timeseries/" -H "Content-Type: application/json" -d '{"lon": 6, "lat": 46, "startTime": 1497916800, "endTime": 1500667800}' --max-time 60
+        run: curl -X POST "https://glp.mgravey.com/GeoPressure/v2/timeseries/" -H "Content-Type: application/json" -d '{"lon": 6, "lat": 46, "time": [1572075000, 1572076800, 1572078600], "pressure": [97766, 97800, 97833]}' --max-time 60
