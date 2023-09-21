@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from GEE_API_server import GEE_Service
 
-
+numCores = os.cpu_count()
 
 def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs. '):
 	return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
@@ -100,21 +100,33 @@ class GP_map_v2(GEE_Service):
 		urls={}
 
 		ims={}
-		for label in listLabel_py:
-			ims[label]=runMSEmatch(fc.filter(self.ee.Filter.equals('label',label)));
+
+		def process_label(label):
+		    return label, runMSEmatch(fc.filter(self.ee.Filter.equals('label', label)))
+
+		# Parallel execution
+		with ThreadPoolExecutor(max_workers=max(1,numCores-1)) as executor:
+		    results = executor.map(process_label, listLabel_py)
+
+		# Collect results
+		for label, result in results:
+		    ims[label] = result
 
 		bbox=self.ee.Algorithms.GeometryConstructors.BBox(W,S,E,N);
 
 		def getEEUrl(label):
 			start_time = tm.time()
 			if ims[label]:
-				urls[label] = ims[label].getDownloadURL({"name": 'label', "dimensions": boxSize, "format": "GEO_TIFF", "region": bbox})
+				try:
+					urls[label] = ims[label].getDownloadURL({"name": 'label', "dimensions": boxSize, "format": "GEO_TIFF", "region": bbox})
+				except Exception as e:
+					print(e)
 			else:
 				urls[label] = None
 			end_time = tm.time()
 
 		start_time = tm.time()
-		with ThreadPoolExecutor(max_workers=25) as executor:
+		with ThreadPoolExecutor(max_workers=numCores*5) as executor:
 			executor.map(getEEUrl, listLabel_py)
 		end_time = tm.time()
 
@@ -215,9 +227,9 @@ class GP_map_v2(GEE_Service):
 
 		try:
 			if(numpy.array(time).max()*1000>self.endERA5):
-				return (416,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':timeStamp,'errorMesage':"ERA-5 data not available from {}. Request only pressure with earlier date.".jsonObjat(datetime.datetime.utcfromtimestamp(self.endERA5/1000)),"lastERA5":self.endERA5}));
+				return (416,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':timeStamp,'errorMesage':"ERA-5 data not available from {}. Request only pressure with earlier date.".format(datetime.datetime.utcfromtimestamp(self.endERA5/1000)),"lastERA5":self.endERA5}));
 			dic = self.getMSE_Map(time, pressure, label, W, S, E, N, [sizeLon, sizeLat], scale, includeMask, maxSample, margin, maskThreshold);
 			dic = {'status':'success', 'taskID':timeStamp,'data':dic};
 			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
 		except Exception as e:
-			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".jsonObjat(timeStamp));
+			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".format(timeStamp));
