@@ -18,7 +18,8 @@ hightVolumeEndpoint=True;
 
 #["/","/GeoPressure/v1/","/GeoPressure"]
 httpd = server(server_address, handler,{'/GeoPressure/v2/timeseries/':GP_timeseries_v2(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint),
-										'/GeoPressure/v2/map/':GP_map_v2(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint)})
+										'/GeoPressure/v2/map/':GP_map_v2(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint),
+										'/GeoPressure/v2/elevationPath/':GP_elevationPath(os.environ['GEE_API_ADDRESS'],'../gee-api-key.json',hightVolumeEndpoint)})
 
 #https is handle by nginx
 httpd.serve_forever()
