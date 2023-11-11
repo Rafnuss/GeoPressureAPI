@@ -16,13 +16,14 @@ class GP_elevationPath(GEE_Service):
 	def __init__(self,service_account, apiKeyFile, highvolume=False ):
 		super(GP_elevationPath, self).__init__(service_account, apiKeyFile, highvolume)
 
-	def getElevationAlongPath(self, path, distanceSampling, dataScale=-1 ):
-		if(dataScale==-1):
-			dataScale=distanceSampling;
+	def getElevationAlongPath(self, path, distanceSampling, dataScale, percentileArray ):
+
+		dataScale*=111139;
+		distanceSampling*=111139;
 
 		#SRTM = self.ee.Image("CGIAR/SRTM90_V4")	
-		#elev=SRTM.reduceResolution(self.ee.Reducer.percentile([10,50,90]),True)
-		elev=self.ee.ImageCollection("COPERNICUS/DEM/GLO30").mosaic().select("DEM").reproject(crs="EPSG:4326",scale=1000).reduceResolution(self.ee.Reducer.percentile([10,50,90]),True)
+		#elev=SRTM.reduceResolution(self.ee.Reducer.percentile(percentileArray),True)
+		elev=self.ee.ImageCollection("COPERNICUS/DEM/GLO30").mosaic().select("DEM").reproject(crs="EPSG:4326",scale=dataScale/8).reduceResolution(self.ee.Reducer.percentile(percentileArray),True)
 		def makeAsPoint(l):
 			return self.ee.Geometry.Point(l);
 		listPoint=self.ee.Geometry.LineString(path).coordinates()
@@ -48,7 +49,7 @@ class GP_elevationPath(GEE_Service):
 
 		val=elev.unmask(0).reduceRegions(samplePoints,self.ee.Reducer.first(),dataScale)
 
-		url=val.getDownloadURL("csv", ["elevation_p10","elevation_p50","elevation_p90","pathPosition"], "elevPath")
+		url=val.getDownloadURL("csv", [f"DEM_p{num}" for num in percentileArray]+["pathPosition"], "elevPath")
 
 		return {
 					'format':'csv',
@@ -72,6 +73,9 @@ class GP_elevationPath(GEE_Service):
 		
 		if 'scale' not in jsonObj.keys():
 			return printErrorMessage(timeStamp,'scale is missing')
+
+		if 'samplingScale' not in jsonObj.keys():
+			return printErrorMessage(timeStamp,'scale is missing')
 		
 		
 
@@ -81,13 +85,29 @@ class GP_elevationPath(GEE_Service):
 		if 'path' in jsonObj.keys():
 			path=jsonObj["path"]
 
+
 		try:
 			scale=float(jsonObj["scale"]);
+			samplingScale=scale;
 		except:
 			return printErrorMessage(timeStamp,'scale should be a number. '); 
+
+		if 'samplingScale' in jsonObj.keys():
+			try:
+				samplingScale=float(jsonObj["samplingScale"]);
+			except:
+				return printErrorMessage(timeStamp,'samplingScale should be a number. '); 
 		
+		percentile=[10,50,90];
+
+		if 'percentile' in jsonObj.keys():
+			try:
+				percentile=jsonObj["percentile"];
+			except:
+				return printErrorMessage(timeStamp,'samplingScale should be a number. '); 
+
 		try:
-			dic = self.getElevationAlongPath(path,scale,scale);
+			dic = self.getElevationAlongPath(path,samplingScale,scale,percentile);
 			dic = {'status':'success', 'taskID':timeStamp,'data':dic};
 			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
 		except Exception as e:
