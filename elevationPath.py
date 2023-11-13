@@ -43,19 +43,28 @@ class GP_elevationPath(GEE_Service):
 				pt=self.ee.Geometry.Point(self.ee.Geometry(l).coordinates().get(0))
 				return self.ee.Feature(pt,{"pathPosition":pt.distance(start).divide(length).add(line.getNumber("startIndex"))})
 
-			return self.ee.FeatureCollection(line.geometry().cutLines(self.ee.List.sequence(0,length,distanceSampling)).geometries().map(getSampleFeatures))
+			return self.ee.FeatureCollection(line.geometry().cutLines(self.ee.List.sequence(0,length.add(distanceSampling),distanceSampling)).geometries().map(getSampleFeatures))
 
 		samplePoints=listLine.map(lineAsCollection).flatten()
 
-		val=elev.unmask(0).reduceRegions(samplePoints,self.ee.Reducer.first(),dataScale)
+		col=self.ee.FeatureCollection(elev.unmask(0).reduceRegions(samplePoints,self.ee.Reducer.first(),dataScale))
 
-		url=val.getDownloadURL("csv", [f"DEM_p{num}" for num in percentileArray]+["pathPosition"], "elevPath")
+		
+
+		def toJson(key,val):
+			return col.aggregate_array(val);
+
+		js=self.ee.Dictionary.fromLists([f"{num}" for num in percentileArray]+["pathPosition"], [f"DEM_p{num}" for num in percentileArray]+["pathPosition"]).map(toJson)
+
+		#url=val.getDownloadURL("csv", [f"DEM_p{num}" for num in percentileArray]+["pathPosition"], "elevPath")
 
 		return {
-					'format':'csv',
-					'url':url,
-					'resolution':dataScale,
-					'spacing':distanceSampling
+					#'format':'csv',
+					#'url':url,
+					'data':js.getInfo(),
+					'scale':dataScale,
+					'samplingScale':distanceSampling,
+					'percentile':percentileArray
 				}
 
 	def singleRequest(self, jsonObj, requestType):
