@@ -189,6 +189,63 @@ POST /glp.mgravey.com:24853/GeoPressure/v2/timeseries/
 }
 ```
 
+
+## Ground elevation along a path
+```http
+POST /glp.mgravey.com/GeoPressure/v2/elevationPath/
+```
+### Description
+This entry point returns the ground elevation from SRTM ([SRTM90_V4](https://developers.google.com/earth-engine/datasets/catalog/CGIAR_SRTM90_V4)) along a polyline
+
+### Request
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `lon` | `array of number` | **Required**. longitude coordinate. -180° to 180°. |
+| `lat` | `array of number` | **Required**. latitude coordinate. 0° to 90°. |
+| `scale` | `number` | **Required**. Number of pixels per latitude, longitude. 10 for a resolution of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
+| `samplingScale` | `number` | **Required**. Number of pixels per latitude, longitude. 10 for a resolution of 0.1° (~10) and 4 for a resolution of 0.25° (~30km). To avoid interpolating the ERA5 data, `scale` should be smaller than 10. Read more about `scale` on [Google earth Engine documention.](https://developers.google.com/earth-engine/guides/scale).  |
+| `percentile` | `array of number` |  **Required** Between 0 and 100.  |
+
+### Example
+#### API Endpoint
+```http
+POST /glp.mgravey.com:24853/GeoPressure/v2/timeseries/
+```
+
+#### Request (POST with JSON body)
+```json
+{
+    "lon": [8.47, 9.41, 9.01, -0.91, 14.24, 27.30, 34.39, 30.00],
+    "lat": [48.89, 44.78, 40.07, 37.68, 17.33, 7.32, 8.09, -23.13],
+    "scale": 10
+    "smaplingScale": 1
+}
+```
+
+#### Response:
+```javascript
+{
+  "status" : "success",
+  "task_id" : 1639259414,
+  "data"    : {
+    "percentileData": {
+      "10": [0, 0, 0, 0, 305, 357, 289, 426, 399, 402, 209, 119, 0, 0],
+      "50": [237, 237, 237, 587, 552, 551, 363, 569, 553, 981, 1137, 545, 188, 188],
+      "90": [880, 880, 880, 1260, 1138, 859, 480, 900, 756, 1788, 1768, 1311, 1002, 1002],
+      "distance": [0, 462486, 986718, 1886940, 2997967.759714002, 4107611.1789356107, 4585219, 5696169.77351964, 6384645, 7171428, 8277490.328782117, 9383674.502677774, 10490621.943273364, 10657884],
+      "lat": [44.927, 44.927, 44.927, 34.943, 24.959, 24.959, 14.976, 14.976, 4.992, 4.992, -4.992, -14.976, -24.959, -24.959],
+      "lon": [4.992, 4.992, 4.992, -4.992, 4.992, 14.976, 14.976, 24.959, 24.959, 34.943, 34.943, 34.943, 34.943, 34.943],
+      "stapId": [0, 1, 2, 3, 3.4117541918601204, 3.8229953380328396, 4, 4.61739187333294, 5, 6, 6.317245494740039, 6.634525937613036, 6.952025303882606, 7]
+    },
+    "scale": 1111390.0,
+    "samplingScale": 1111390.0,
+    "percentile": [10, 50, 90]
+  }
+}
+```
+
+
 ## Installation
 
 To install the server:
