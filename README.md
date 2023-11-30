@@ -157,7 +157,7 @@ See example for response structure.
 
 The url will with return a `csv` the following columns:
 
-| date | pressure | (altitude) |
+| time | pressure | (altitude) |
 | :--- | :--- | :--- |
 | ... | ... | ... |
 
