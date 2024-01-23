@@ -41,7 +41,8 @@ class GEE_Handler (SimpleHTTPRequestHandler):
             field_data = self.rfile.read(length);
             jsonObj = json.loads(field_data.decode('utf-8'))
             self.GEE_service(parsedUrl.path, jsonObj,'POST');
-        except:
+        except Exception as e:
+            print("Exception occurred:", e)
             self.catastrophicError();
 
     def GEE_service(self,service, jsonObj, requestType):
