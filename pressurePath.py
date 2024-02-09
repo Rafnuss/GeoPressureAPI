@@ -78,9 +78,13 @@ class GP_pressurePath(GEE_Service):
 
 			agregatedMap=self.ee.FeatureCollection(era5_llabelFeature.map(getAltitude))
 
+
+			for key in list(set(["time"]+(["altitude"] if pressure else []) +variable)):
+				agregatedMap=agregatedMap.filter(self.ee.Filter.neq(key,None))
+
 			def toJson(key,val):
 				return agregatedMap.aggregate_array(val);
-			print(agregatedMap.getInfo())
+
 			js=self.ee.Dictionary.fromLists(list(set(["time"]+(["altitude"] if pressure else []) +variable)), list(set(["time"]+(["altitude"] if pressure else []) +variable))).map(toJson)
 
 			results[i]=js.getInfo()
@@ -91,7 +95,7 @@ class GP_pressurePath(GEE_Service):
 		with ThreadPoolExecutor(max_workers=numCores*3) as executor:
 			executor.map(runComputation4Chunk,list(range(nbChunk)),[val]*nbChunk)	
 
-		print(results)
+
 		results=[x for x in results if x is not None]
 		
 		return {key: [item for d in results for item in d[key]] for key in results[0]}
