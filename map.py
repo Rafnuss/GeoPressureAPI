@@ -76,9 +76,11 @@ class GP_map_v2(GEE_Service):
 
 			def getError(ft):
 				error=self.ee.Image(ft.get('bestERA5')).select('surface_pressure').subtract(meanMapPressure).subtract(self.ee.Number(ft.get('pressure')).subtract(presureMeanSesnor)).toFloat();
-				altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/min_max_elevation');
-				dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1));
-				isPossible=dh.gte(altIm.select('elevation_min').add(-margin)).And(dh.lte(altIm.select('elevation_max').add(margin))).toFloat();
+				#altIm=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/min_max_elevation'); # geopot included
+				geoPot=self.ee.Image('projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5');
+				altIm=self.ee.ImageCollection("projects/earthimages4unil/assets/PostDocProjects/rafnuss/GLO_minMax_reduced").filter(self.ee.Filter.gte("factor",sclaeFcator)).sort("factor").first()
+				dh = self.ee.Image(ft.get('bestERA5')).select('temperature_2m').divide(Lb).multiply(self.ee.Image.constant(self.ee.Number(ft.get('pressure'))).divide(self.ee.Image(ft.get('bestERA5')).select('surface_pressure')).pow(-R*Lb/g0/M).subtract(1)).add(geoPot);
+				isPossible=dh.gte(altIm.select('DEM_min').add(-margin)).And(dh.lte(altIm.select('DEM_max').add(margin))).toFloat();
 				return error.multiply(error).addBands(isPossible).rename(['mse','probAlt']);
 
 			agregatedMap=self.ee.ImageCollection(era5_llabelFeature.map(getError)).mean()
