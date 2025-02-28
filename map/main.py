@@ -23,8 +23,6 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_
     tmp_file.flush()
     process=GP_map_v2(gee_api_address,tmp_file.name,hightVolumeEndpoint)
 
-process=GP_map_v2(os.environ.get('GEE_API_ADDRESS'),'../gee-api-key.json',hightVolumeEndpoint)
-
 @functions_framework.http
 def map(request):
     defaultHeaders={'Access-Control-Allow-Origin': '*',

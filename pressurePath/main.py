@@ -1,11 +1,27 @@
 import functions_framework
 from pressurePath import *
 import os
+import json
+import tempfile
 
-#'/GeoPressure/v2/map/':
 hightVolumeEndpoint=True;
 
-process=GP_pressurePath(os.environ.get('GEE_API_ADDRESS'),'../gee-api-key.json',hightVolumeEndpoint)
+# Replace these with your actual key and client email values
+gee_api_key_content = os.environ.get('GEE_API_KEY').encode('utf-8').decode('unicode_escape')
+gee_api_address = os.environ.get('GEE_API_ADDRESS').encode('utf-8').decode('unicode_escape')  # should contain your client email
+
+# Prepare the JSON content as a dictionary
+key_data = {
+    "private_key": gee_api_key_content,
+    "client_email": gee_api_address,
+    "token_uri": "https://oauth2.googleapis.com/token"
+}
+
+# Create a temporary JSON file with the key content
+with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
+    json.dump(key_data, tmp_file)
+    tmp_file.flush()
+    process=GP_pressurePath(gee_api_address,tmp_file.name,hightVolumeEndpoint)
 
 @functions_framework.http
 def pressurePath(request):
