@@ -1,7 +1,5 @@
 #!/usr/local/bin/python3
 import math
-import cgi
-jsonObj = cgi.FieldStorage()
 import json
 import datetime
 
@@ -76,9 +74,6 @@ class GP_elevationPath(GEE_Service):
 	def singleRequest(self, jsonObj, requestType):
 		
 		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
-		
-		with open("logs/{}.log".format(timeStamp), 'w') as f:
-			f.write(json.JSONEncoder().encode(jsonObj))
 		
 		if len(jsonObj.keys())<1 :
 			return printErrorMessage(timeStamp,'jsonObj is empty! did you send it as json my accident? ')

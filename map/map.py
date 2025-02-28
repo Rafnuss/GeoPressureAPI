@@ -1,14 +1,10 @@
 #!/usr/local/bin/python3
 import math
-import cgi
-jsonObj = cgi.FieldStorage()
 import json
 import datetime
 import os
-import asyncio
 import numpy
 import time as tm
-from apscheduler.schedulers.background import BackgroundScheduler
 from concurrent.futures import ThreadPoolExecutor
 
 from GEE_API_server import GEE_Service
@@ -25,13 +21,6 @@ class GP_map_v2(GEE_Service):
 		self.endERA5=1;
 		self.endERA5=self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate('2022','2100').aggregate_max('system:time_start').getInfo();
 
-		self.ERA5Scheduler = BackgroundScheduler()
-		self.ERA5Scheduler.add_job(self.updateERA5, 'interval', hours=1)
-		self.ERA5Scheduler.start()
-
-	def updateERA5():
-		self.endERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").filterDate(self.endERA5-1,'2100').aggregate_max('system:time_start').getInfo();
-	
 	def getMSE_Map(self, time, pressure, label, W, S, E, N, boxSize, sclaeFcator=10, includeMask=True, maxSample=250,margin=30,maskThreshold=0.9):
 		
 		def makeFeature(li):
@@ -145,9 +134,6 @@ class GP_map_v2(GEE_Service):
 	def singleRequest(self, jsonObj, requestType):
 		
 		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
-		
-		with open("logs/{}.log".format(timeStamp), 'w') as f:
-			f.write(json.JSONEncoder().encode(jsonObj))
 		
 		if len(jsonObj.keys())<1 :
 			return printErrorMessage(timeStamp,'jsonObj is empty! did you send it as json my accident? ')

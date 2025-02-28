@@ -1,7 +1,5 @@
 #!/usr/local/bin/python3
 import math
-import cgi
-form = cgi.FieldStorage()
 import json
 import datetime
 import os
@@ -75,8 +73,6 @@ class GP_timeseries_v2(GEE_Service):
 
 	def singleRequest(self, jsonObj, requestType):
 		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
-		with open("logs/{}.log".format(timeStamp), 'w') as f:
-			f.write(json.JSONEncoder().encode(jsonObj))
 		
 		if('lon' not in jsonObj.keys() or 'lat' not in jsonObj.keys() ):
 			return printErrorMessage(timeStamp,'lon and lat are mendatory!')
