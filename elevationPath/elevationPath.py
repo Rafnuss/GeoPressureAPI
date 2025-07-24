@@ -1,125 +1,344 @@
 #!/usr/local/bin/python3
-import math
-import json
-import datetime
+"""
+GeoPressure API - Elevation Path Module
 
+This module provides functionality to extract elevation profiles along specified paths
+using Google Earth Engine's Digital Elevation Models (DEM). It supports customizable
+sampling scales, percentile calculations, and path analysis for geolocator studies.
+
+Author: GeoPressure Team
+"""
+
+import datetime
+import json
+import math
 
 from GEE_API_server import GEE_Service
 
-def printErrorMessage(task_id,errorMessage,adviceMessage='Double check the inputs. '):
-	return (400,{"Content-type":"application/json"},json.JSONEncoder().encode({'status':'error','taskID':task_id,'errorMesage':errorMessage,'advice':adviceMessage}));
+
+def printErrorMessage(task_id, errorMessage, adviceMessage="Double check the inputs."):
+    """
+    Create standardized error response for API endpoints.
+
+    Args:
+        task_id (int): Unique task identifier
+        errorMessage (str): Description of the error
+        adviceMessage (str): Guidance for resolving the error
+
+    Returns:
+        tuple: (status_code, headers, json_response)
+    """
+    return (
+        400,
+        {"Content-type": "application/json"},
+        json.JSONEncoder().encode(
+            {
+                "status": "error",
+                "taskID": task_id,
+                "errorMessage": errorMessage,  # Fixed typo: was "errorMesage"
+                "advice": adviceMessage,
+            }
+        ),
+    )
+
 
 class GP_elevationPath(GEE_Service):
+    """
+    GeoPressure Elevation Path Analysis Class
 
-	def __init__(self,service_account, apiKeyFile, highvolume=False ):
-		super(GP_elevationPath, self).__init__(service_account, apiKeyFile, highvolume)
+    Extracts elevation profiles along specified paths using Digital Elevation Models.
+    Supports multi-scale DEM data with percentile-based elevation statistics for
+    uncertainty quantification in geolocator movement analysis.
 
-	def getElevationAlongPath(self, path, distanceSampling, dataScale, percentileArray ):
+    Features:
+    - Custom DEM collection with multiple resolution factors
+    - Path sampling at configurable distances
+    - Percentile-based elevation statistics
+    - Coordinate transformation and projection handling
+    """
 
-		imScale=dataScale
+    def __init__(self, service_account, apiKeyFile, highvolume=False):
+        """
+        Initialize the GP_elevationPath service.
 
-		dataScale=111139/dataScale;
-		distanceSampling=111139/distanceSampling;
+        Args:
+            service_account (str): Google Earth Engine service account email
+            apiKeyFile (str): Path to service account JSON key file
+            highvolume (bool): Use high-volume Earth Engine endpoint
+        """
+        super(GP_elevationPath, self).__init__(service_account, apiKeyFile, highvolume)
 
-		#SRTM = self.ee.Image("CGIAR/SRTM90_V4")	
-		#elev=SRTM.reduceResolution(self.ee.Reducer.percentile(percentileArray),True)
-		#elev=self.ee.ImageCollection("projects/earthimages4unil/assets/PostDocProjects/rafnuss/GLO_reduced").mosaic().select("DEM").reproject(crs="EPSG:4326",scale=dataScale/8).reduceResolution(self.ee.Reducer.percentile(percentileArray),True)
-		elev=self.ee.ImageCollection("projects/earthimages4unil/assets/PostDocProjects/rafnuss/GLO_reduced").filter(self.ee.Filter.gte("factor",imScale)).sort("factor").first()
-		print(elev.getInfo())
-		def makeAsPoint(l):
-			return self.ee.Geometry.Point(l);
-		listPoint=self.ee.Geometry.LineString(path).coordinates()
+    def getElevationAlongPath(self, path, distanceSampling, dataScale, percentileArray):
+        """
+        Extract elevation profiles along a specified path using DEM data.
 
-		def polylineAsMultiline(idVal):
-			idVal=self.ee.Number(idVal);
-			v=self.ee.Feature(self.ee.Geometry.LineString([listPoint.get(idVal),listPoint.get(idVal.add(1))], "EPSG:4326", True),{"startIndex":idVal,})
-			return v.set("dist",v.length())
+        This method samples elevation data along a path at regular intervals,
+        computing percentile statistics to account for DEM uncertainty and
+        provide confidence intervals for elevation estimates.
 
-		listLine=self.ee.List.sequence(0,listPoint.size().subtract(2)); 
-		listLine=self.ee.FeatureCollection(listLine.map(polylineAsMultiline))
+        Args:
+            path (list): List of [lon, lat] coordinate pairs defining the path
+            distanceSampling (float): Distance between sampling points in meters
+            dataScale (float): Spatial resolution of DEM data in meters
+            percentileArray (list): Percentiles to compute (e.g., [10, 50, 90])
 
-		def lineAsCollection(line):
-			length=line.length()
-			start=self.ee.Geometry.Point(line.geometry().coordinates().get(0))
-			cumulDist=listLine.filterMetadata("startIndex","less_than",line.getNumber("startIndex")).aggregate_sum("dist")
+        Returns:
+            dict: Contains elevation data arrays, scales, and metadata
 
-			def getSampleFeatures(l):
-				pt=self.ee.Geometry.Point(self.ee.Geometry(l).coordinates().get(0))
-				return self.ee.Feature(pt,{"stapId":pt.distance(start).divide(length).add(line.getNumber("startIndex")),"distance":pt.distance(start).add(cumulDist.round())})
+        Algorithm:
+        1. Convert path to line segments with distance calculations
+        2. Sample points along path at specified intervals
+        3. Extract DEM elevations at sample points
+        4. Return percentile statistics and coordinates
+        """
 
-			return self.ee.FeatureCollection(line.geometry().cutLines(self.ee.List.sequence(0,length.add(distanceSampling),distanceSampling)).geometries().map(getSampleFeatures))
+        # Store original scale for DEM selection
+        imageScale = dataScale
 
-		samplePoints=listLine.map(lineAsCollection).flatten()
+        # Convert from meters to degrees (approximate conversion at equator)
+        # 111139 meters ≈ 1 degree latitude/longitude
+        dataScale = 111139 / dataScale
+        distanceSampling = 111139 / distanceSampling
 
-		col=self.ee.FeatureCollection(elev.round().unmask(0).addBands(self.ee.Image.pixelLonLat().multiply(1000).round().divide(1000)).reduceRegions(samplePoints,self.ee.Reducer.first(),dataScale))
+        # Select appropriate DEM from multi-resolution collection
+        # Uses custom DEM collection with different resolution factors
+        elevation_image = (
+            self.ee.ImageCollection(
+                "projects/earthimages4unil/assets/PostDocProjects/rafnuss/GLO_reduced"
+            )
+            .filter(self.ee.Filter.gte("factor", imageScale))
+            .sort("factor")
+            .first()
+        )
 
-		
+        # Debug: Print selected DEM info (remove in production)
+        print(elevation_image.getInfo())
 
-		def toJson(key,val):
-			return col.aggregate_array(val);
+        # Convert path to Earth Engine LineString and extract coordinates
+        line_points = self.ee.Geometry.LineString(path).coordinates()
 
-		js=self.ee.Dictionary.fromLists(["stapId","lon","lat","distance"]+[f"{num}" for num in percentileArray], ["stapId","longitude","latitude","distance"]+[f"DEM_p{num}" for num in percentileArray]).map(toJson)
+        def polylineAsMultiline(idVal):
+            """
+            Convert path segments into individual line features with distances.
 
-		#url=val.getDownloadURL("csv", [f"DEM_p{num}" for num in percentileArray]+["pathPosition"], "elevPath")
+            Args:
+                idVal: Index of the line segment
 
-		return {
-					#'format':'csv',
-					#'url':url,
-					'percentileData':js.getInfo(),
-					'scale':dataScale,
-					'samplingScale':distanceSampling,
-					'percentile':percentileArray
-				}
+            Returns:
+                Earth Engine Feature representing one path segment
+            """
+            idVal = self.ee.Number(idVal)
+            segment = self.ee.Feature(
+                self.ee.Geometry.LineString(
+                    [line_points.get(idVal), line_points.get(idVal.add(1))],
+                    "EPSG:4326",
+                    True,
+                ),
+                {"startIndex": idVal},
+            )
+            return segment.set("dist", segment.length())
 
-	def singleRequest(self, jsonObj, requestType):
-		
-		timeStamp=math.floor(datetime.datetime.utcnow().timestamp());
-		
-		if len(jsonObj.keys())<1 :
-			return printErrorMessage(timeStamp,'jsonObj is empty! did you send it as json my accident? ')
+        # Create line segments from consecutive coordinate pairs
+        line_indices = self.ee.List.sequence(0, line_points.size().subtract(2))
+        line_segments = self.ee.FeatureCollection(line_indices.map(polylineAsMultiline))
 
-		if 'path' not in jsonObj.keys() and not ('lat'  in jsonObj.keys()  and 'lon' in jsonObj.keys()):
-			return printErrorMessage(timeStamp,'path or lat + lon is missing, is should be an array of [lon,lat] or an array of lat and an array on lon. ')
-		
-		if 'scale' not in jsonObj.keys():
-			return printErrorMessage(timeStamp,'scale is missing')
+        def lineAsCollection(line):
+            """
+            Sample points along a line segment at regular intervals.
 
-		if 'samplingScale' not in jsonObj.keys():
-			return printErrorMessage(timeStamp,'scale is missing')
-		
-		
+            Args:
+                line: Earth Engine Feature representing a path segment
 
-		if 'lat' in jsonObj.keys() and 'lon' in jsonObj.keys():
-			path=list(zip(jsonObj["lon"],jsonObj["lat"]))
-			path=path+path[-1:]
+            Returns:
+                FeatureCollection of sample points with position metadata
+            """
+            length = line.length()
+            start = self.ee.Geometry.Point(line.geometry().coordinates().get(0))
 
-		if 'path' in jsonObj.keys():
-			path=jsonObj["path"]
+            # Calculate cumulative distance from start of path
+            cumulative_distance = line_segments.filterMetadata(
+                "startIndex", "less_than", line.getNumber("startIndex")
+            ).aggregate_sum("dist")
 
+            def getSampleFeatures(segment_geometry):
+                """Extract sample point with position and distance metadata."""
+                point = self.ee.Geometry.Point(
+                    self.ee.Geometry(segment_geometry).coordinates().get(0)
+                )
+                return self.ee.Feature(
+                    point,
+                    {
+                        "stepId": (  # Fixed typo: was "stapId"
+                            point.distance(start)
+                            .divide(length)
+                            .add(line.getNumber("startIndex"))
+                        ),
+                        "distance": point.distance(start).add(
+                            cumulative_distance.round()
+                        ),
+                    },
+                )
 
-		try:
-			scale=float(jsonObj["scale"]);
-			samplingScale=scale;
-		except:
-			return printErrorMessage(timeStamp,'scale should be a number. '); 
+            # Cut line into segments at sampling intervals and extract points
+            return self.ee.FeatureCollection(
+                line.geometry()
+                .cutLines(
+                    self.ee.List.sequence(
+                        0, length.add(distanceSampling), distanceSampling
+                    )
+                )
+                .geometries()
+                .map(getSampleFeatures)
+            )
 
-		if 'samplingScale' in jsonObj.keys():
-			try:
-				samplingScale=float(jsonObj["samplingScale"]);
-			except:
-				return printErrorMessage(timeStamp,'samplingScale should be a number. '); 
-		
-		percentile=[10,50,90];
+        # Generate all sample points along the path
+        sample_points = line_segments.map(lineAsCollection).flatten()
 
-		if 'percentile' in jsonObj.keys():
-			try:
-				percentile=jsonObj["percentile"];
-			except:
-				return printErrorMessage(timeStamp,'samplingScale should be a number. '); 
+        # Sample elevation data at all points
+        # Add longitude/latitude bands for coordinate extraction
+        elevation_collection = self.ee.FeatureCollection(
+            elevation_image.round()
+            .unmask(0)  # Fill missing values with 0
+            .addBands(
+                self.ee.Image.pixelLonLat()
+                .multiply(1000)
+                .round()
+                .divide(1000)  # Round coordinates to 3 decimal places
+            )
+            .reduceRegions(sample_points, self.ee.Reducer.first(), dataScale)
+        )
 
-		try:
-			dic = self.getElevationAlongPath(path,samplingScale,scale,percentile);
-			dic = {'status':'success', 'taskID':timeStamp,'data':dic};
-			return (200,{"Content-type":"application/json"},json.JSONEncoder().encode(dic));
-		except Exception as e:
-			return printErrorMessage(timeStamp,str(e),"An error has occurred. Please try again, and if the problem persists, file an issue on https://github.com/Rafnuss/GeoPressureServer/issues/new?body=task_id:{}&labels=crash".format(timeStamp));
+        def toJson(key, val):
+            """Extract array values for a given variable."""
+            return elevation_collection.aggregate_array(val)
+
+        # Create output dictionary mapping display names to data arrays
+        output_keys = ["stepId", "lon", "lat", "distance"] + [
+            f"{num}" for num in percentileArray
+        ]
+        data_keys = ["stepId", "longitude", "latitude", "distance"] + [
+            f"DEM_p{num}" for num in percentileArray
+        ]
+
+        elevation_data = self.ee.Dictionary.fromLists(output_keys, data_keys).map(
+            toJson
+        )
+
+        return {
+            "percentileData": elevation_data.getInfo(),
+            "scale": dataScale,
+            "samplingScale": distanceSampling,
+            "percentile": percentileArray,
+        }
+
+    def singleRequest(self, jsonObj, requestType):
+        """
+        Handle a single API request for elevation path analysis.
+
+        Validates input parameters, processes the elevation extraction request,
+        and returns results in standardized JSON format. Supports both path arrays
+        and separate lat/lon arrays for coordinate specification.
+
+        Args:
+            jsonObj (dict): JSON request object with required parameters
+            requestType: Request type (unused, maintained for compatibility)
+
+        Returns:
+            tuple: (status_code, headers, json_response)
+
+        Required Parameters:
+            - path OR (lat AND lon): Coordinate specification
+            - scale: DEM resolution in meters
+            - samplingScale: Distance between sample points in meters
+
+        Optional Parameters:
+            - percentile: Array of percentiles to compute (default: [10, 50, 90])
+        """
+        timeStamp = math.floor(datetime.datetime.utcnow().timestamp())
+
+        # Validate JSON object
+        if len(jsonObj.keys()) < 1:
+            return printErrorMessage(
+                timeStamp, "JSON object is empty! Did you send it as JSON by accident?"
+            )
+
+        # Validate coordinate parameters
+        if "path" not in jsonObj.keys() and not (
+            "lat" in jsonObj.keys() and "lon" in jsonObj.keys()
+        ):
+            return printErrorMessage(
+                timeStamp,
+                "Path or lat + lon is missing. Should be an array of [lon,lat] or arrays of lat and lon coordinates.",
+            )
+
+        # Validate required scale parameter
+        if "scale" not in jsonObj.keys():
+            return printErrorMessage(
+                timeStamp, "Scale parameter is missing and required."
+            )
+
+        # Validate required samplingScale parameter
+        if "samplingScale" not in jsonObj.keys():
+            return printErrorMessage(
+                timeStamp, "SamplingScale parameter is missing and required."
+            )
+
+        # Process coordinate input - convert lat/lon arrays to path if needed
+        if "lat" in jsonObj.keys() and "lon" in jsonObj.keys():
+            path = list(zip(jsonObj["lon"], jsonObj["lat"]))
+            # Duplicate last point for path completion (original behavior)
+            path = path + path[-1:]
+        elif "path" in jsonObj.keys():
+            path = jsonObj["path"]
+
+        # Validate and parse scale parameter
+        try:
+            scale = float(jsonObj["scale"])
+            samplingScale = scale  # Default sampling scale to DEM scale
+        except (ValueError, TypeError):
+            return printErrorMessage(timeStamp, "Scale should be a number.")
+
+        # Parse optional samplingScale parameter
+        if "samplingScale" in jsonObj.keys():
+            try:
+                samplingScale = float(jsonObj["samplingScale"])
+            except (ValueError, TypeError):
+                return printErrorMessage(timeStamp, "SamplingScale should be a number.")
+
+        # Set default percentiles for elevation statistics
+        percentile = [10, 50, 90]
+
+        # Parse optional percentile parameter
+        if "percentile" in jsonObj.keys():
+            try:
+                percentile = jsonObj["percentile"]
+                # Validate percentile values are within valid range
+                if not all(0 <= p <= 100 for p in percentile):
+                    return printErrorMessage(
+                        timeStamp, "Percentile values should be between 0 and 100."
+                    )
+            except (ValueError, TypeError):
+                return printErrorMessage(
+                    timeStamp, "Percentile should be an array of numbers."
+                )
+
+        try:
+            # Process the elevation extraction request
+            data = self.getElevationAlongPath(path, samplingScale, scale, percentile)
+            response = {"status": "success", "taskID": timeStamp, "data": data}
+            return (
+                200,
+                {"Content-type": "application/json"},
+                json.JSONEncoder().encode(response),
+            )
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return printErrorMessage(
+                timeStamp,
+                str(e),
+                "An error occurred during processing. Please try again, and if the problem persists, file an issue at https://github.com/Rafnuss/GeoPressureAPI/issues/new?body=task_id:{}&labels=crash".format(
+                    timeStamp
+                ),
+            )
