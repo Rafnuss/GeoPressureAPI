@@ -91,7 +91,7 @@ class GP_pressurePath(GEE_Service):
 		results=[None]*nbChunk;
 
 		with ThreadPoolExecutor(max_workers=min(nbChunk,90)) as executor:
-			executor.map(runComputation4Chunk,list(range(nbChunk)),[val]*nbChunk)	
+			executor.map(runComputation4Chunk,list(range(nbChunk)),[val]*nbChunk)
 
 
 		results=[x for x in results if x is not None]
