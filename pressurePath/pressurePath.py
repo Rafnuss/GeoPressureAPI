@@ -90,7 +90,7 @@ class GP_pressurePath(GEE_Service):
 		size=len(path);
 		results=[None]*nbChunk;
 
-		with ThreadPoolExecutor(max_workers=numCores*3) as executor:
+		with ThreadPoolExecutor(max_workers=min(nbChunk,90)) as executor:
 			executor.map(runComputation4Chunk,list(range(nbChunk)),[val]*nbChunk)	
 
 
