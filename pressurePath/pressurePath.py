@@ -77,6 +77,19 @@ class GP_pressurePath(GEE_Service):
         era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
         era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
 
+        strToRemove=self.ee.String("_hourly");
+
+        def removeHourly(str):
+            return self.ee.String(str).slice(0,strToRemove.length().multiply(-1))
+
+        oldNName=era5_land.first().bandNames().filter(self.ee.Filter.stringEndsWith('item',strToRemove));
+        newName=oldNName.map(removeHourly)
+
+        def addRenamed(im):
+            return im.addBands(im.select(oldNName,newName),None,True);
+		
+        era5_land=era5_land.map(addRenamed);
+
         # Create index-based filter for joining collections
         indexFilter = self.ee.Filter.equals(
             leftField="system:index", rightField="system:index"
@@ -309,7 +322,7 @@ class GP_pressurePath(GEE_Service):
         results = [None] * nbChunk
 
         # Process chunks in parallel
-        with ThreadPoolExecutor(max_workers=numCores * 3) as executor:
+        with ThreadPoolExecutor(max_workers=min(nbChunk,90)) as executor:
             executor.map(runComputation4Chunk, list(range(nbChunk)), [val] * nbChunk)
 
         # Filter out empty results and combine chunks
