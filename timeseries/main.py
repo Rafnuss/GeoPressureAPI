@@ -112,7 +112,7 @@ def timeseries(request):
                 "If you intended to use API V1 (which is no longer maintained), you may do so. However, "
                 "we strongly recommend using a POST request with JSON on the API V2 for better support.".encode(
                     "utf-8"
-                ),  # Fixed typo: was "PSOT"
+                ),  # Updated error message text: corrected typo from "PSOT" to "POST"
                 400,  # Changed from 500 to 400 (Bad Request)
                 default_headers,
             )
