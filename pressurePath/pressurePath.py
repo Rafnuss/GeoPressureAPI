@@ -19,6 +19,19 @@ class GP_pressurePath(GEE_Service):
 		Era5Land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
 		Era5=self.ee.ImageCollection("ECMWF/ERA5/HOURLY");
 
+		strToRemove=ee.String("_hourly");
+
+		def removeHourly(str):
+			return ee.String(str).slice(0,strToRemove.length().multiply(-1))
+
+		oldNName=Era5Land.first().bandNames().filter(ee.Filter.stringEndsWith('item',strToRemove));
+		newName=oldNName.map(removeHourly)
+
+		def addRenamed(im):
+			return im.addBands(im.select(oldNName,newName),null,true);
+		
+		Era5Land=Era5Land.map(addRenamed);
+
 		indexFilter = self.ee.Filter.equals(leftField= 'system:index',rightField= 'system:index');
 
 		simpleJoin = self.ee.Join.saveFirst("match");
