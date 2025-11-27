@@ -74,12 +74,15 @@ class GP_pressurePath(GEE_Service):
         super(GP_pressurePath, self).__init__(service_account, apiKeyFile, highvolume)
 
         # Load reference geopotential and DEM data
-        self.geoPot = self.ee.Image(
+        geoPot = self.ee.Image(
             "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
         ).rename("geopotential");
 
-        self.era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
-        self.era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY");
+        def addGeopot(im):
+            return im.addBands(geoPot.updateMask(im.select("temperature_2m").mask()));
+        
+        era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").map(addGeopot);
+        era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
 
         strToRemove=self.ee.String("_hourly");
 
@@ -131,6 +134,8 @@ class GP_pressurePath(GEE_Service):
 
         # Create combined ERA5 collection with merged bands
         self.ERA5Combined = self.ee.ImageCollection(simpleJoined).map(combineBands)
+        self.era5_land=era5_land;
+        self.era5_single=era5_single;
 
     def getPressureAlongPath(  # Fixed typo: was "getPresureAlongPath"
         self, path, time, pressure, variable, nbChunk=10, dataset="both"
@@ -210,9 +215,7 @@ class GP_pressurePath(GEE_Service):
             if dataset.lower() == "single-levels":
                 ERA5 = self.era5_single
             elif dataset.lower() == "land":
-                def addGeopot(im):
-                    return im.addBands(self.geoPot.updateMask(im.select("temperature_2m").mask()));
-                ERA5 = self.era5_land.map(addGeopot)
+                ERA5 = self.era5_land
             else:
                 ERA5 = self.ERA5Combined
 
