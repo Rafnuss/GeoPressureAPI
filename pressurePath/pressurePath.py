@@ -87,10 +87,10 @@ class GP_pressurePath(GEE_Service):
         )
         def addGeopot(im):
             return im.addBands(geoPot.updateMask(im.select("temperature_2m").mask()));
-        era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").map(addGeopot);
+        self.era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").map(addGeopot);
 
 
-        era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
+        self.era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
 
         strToRemove=self.ee.String("_hourly");
 
