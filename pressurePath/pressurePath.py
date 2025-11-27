@@ -73,8 +73,23 @@ class GP_pressurePath(GEE_Service):
         """
         super(GP_pressurePath, self).__init__(service_account, apiKeyFile, highvolume)
 
+        # Load reference geopotential and DEM data
+        geoPot = self.ee.Image(
+            "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
+        ).rename("geopotential");
+
+        
+
         # Initialize ERA5 data collections
-        era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+        
+        altIm = self.ee.Image(
+                    "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
+        )
+        def addGeopot(im):
+            return im.addBands(geoPot.updateMask(im.select("temperature_2m").mask()));
+        era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").map(addGeopot);
+
+
         era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
 
         strToRemove=self.ee.String("_hourly");
@@ -255,15 +270,11 @@ class GP_pressurePath(GEE_Service):
                 g0 = 9.80665  # Gravitational acceleration [m/s²]
                 M = 0.0289644  # Molar mass of Earth's air [kg/mol]
 
-                # Get geopotential height image (reference altitude)
-                altIm = self.ee.Image(
-                    "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
-                )
-
                 # Calculate altitude using barometric formula
                 # h = (T/Lb) * ((P/P0)^(-R*Lb/g0/M) - 1) + h0
+                im=self.ee.Image(ft.get("bestERA5"));
                 dh = (
-                    self.ee.Image(ft.get("bestERA5"))
+                    im
                     .select("temperature_2m")
                     .divide(Lb)
                     .multiply(
@@ -274,7 +285,7 @@ class GP_pressurePath(GEE_Service):
                         .pow(-R * Lb / g0 / M)
                         .subtract(1)
                     )
-                    .add(altIm)
+                    .add(im.select("geopotential"))
                     .rename("altitude")
                 )
 
