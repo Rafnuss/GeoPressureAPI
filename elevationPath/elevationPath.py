@@ -168,7 +168,7 @@ class GP_elevationPath(GEE_Service):
                 return self.ee.Feature(
                     point,
                     {
-                        "stepId": (  # Fixed typo: was "stapId"
+                        "stapId": (
                             point.distance(start)
                             .divide(length)
                             .add(line.getNumber("startIndex"))
@@ -213,10 +213,10 @@ class GP_elevationPath(GEE_Service):
             return elevation_collection.aggregate_array(val)
 
         # Create output dictionary mapping display names to data arrays
-        output_keys = ["stepId", "lon", "lat", "distance"] + [
+        output_keys = ["stapId", "lon", "lat", "distance"] + [
             f"{num}" for num in percentileArray
         ]
-        data_keys = ["stepId", "longitude", "latitude", "distance"] + [
+        data_keys = ["stapId", "longitude", "latitude", "distance"] + [
             f"DEM_p{num}" for num in percentileArray
         ]
 
