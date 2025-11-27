@@ -219,9 +219,9 @@ class GP_pressurePath(GEE_Service):
 
             # Select appropriate ERA5 dataset
             if dataset.lower() == "single-levels":
-                ERA5 = era5_single
+                ERA5 = self.era5_single
             elif dataset.lower() == "land":
-                ERA5 = era5_land
+                ERA5 = self.era5_land
             else:
                 ERA5 = self.ERA5Combined
 
