@@ -76,7 +76,7 @@ class GP_pressurePath(GEE_Service):
         # Load reference geopotential and DEM data
         geoPot = self.ee.Image(
             "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
-        ).rename("geopotential");
+        ).multiply(9.80665).rename("geopotential");
 
         def addGeopot(im):
             return im.addBands(geoPot.updateMask(im.select("temperature_2m").mask()));
@@ -279,7 +279,7 @@ class GP_pressurePath(GEE_Service):
                         .pow(-R * Lb / g0 / M)
                         .subtract(1)
                     )
-                    .add(im.select("geopotential"))
+                    .add(im.select("geopotential").divide(g0))
                     .rename("altitude")
                 )
 
