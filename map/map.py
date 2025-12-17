@@ -254,7 +254,7 @@ class GP_map_v2(GEE_Service):
             ERA5_pressure = ERA5.filterDate(  # Fixed typo: was "ERA5_pressur"
                 self.ee.Date(start).advance(-1, "hour"),
                 self.ee.Date(end).advance(1, "hour"),
-            ).select(["surface_pressure", "temperature_2m"])
+            ).select(["surface_pressure", "temperature_2m","geopotential"])
 
             # Match each measurement with closest ERA5 timestamp
             era5_labelFeature = self.ee.Join.saveBest(  # Fixed typo: was "era5_llabelFeature"
