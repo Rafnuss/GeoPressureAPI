@@ -81,12 +81,60 @@ class GP_map_v2(GEE_Service):
         
         # Get the last available timestamp for ERA5 data to validate requests
         self.endERA5 = 1
+       # Load reference geopotential and DEM data
+        geoPot = self.ee.Image(
+            "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
+        ).multiply(9.80665).rename("geopotential")
+
+        def addGeopot(im):
+            return im.addBands(geoPot.updateMask(im.select("temperature_2m").mask()))
+
+        era5_land = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY").map(addGeopot)
+        era5_single = self.ee.ImageCollection("ECMWF/ERA5/HOURLY")
+
+        # Rename hourly suffix to avoid band conflicts
+        strToRemove = self.ee.String("_hourly")
+
+        def removeHourly(str_):
+            return self.ee.String(str_).slice(0, strToRemove.length().multiply(-1))
+
+        oldNName = era5_land.first().bandNames().filter(
+            self.ee.Filter.stringEndsWith('item', strToRemove)
+        )
+        newName = oldNName.map(removeHourly)
+
+        def addRenamed(im):
+            return im.addBands(im.select(oldNName, newName), None, True)
+
+        era5_land = era5_land.map(addRenamed)
+
+        # Join ERA5 and ERA5-LAND
+        indexFilter = self.ee.Filter.equals(leftField="system:index", rightField="system:index")
+        simpleJoin = self.ee.Join.saveFirst("match")
+        simpleJoined = simpleJoin.apply(era5_single, era5_land, indexFilter)
+
+        def combineBands(image):
+            land_image = self.ee.Image(image.get("match"))
+            commonBands = land_image.bandNames().filter(
+                self.ee.Filter.inList("item", image.bandNames())
+            )
+            return image.addBands(
+                self.ee.ImageCollection([image, land_image]).select(commonBands).mosaic(),
+                None,
+                True,
+            )
+
+        self.ERA5Combined = self.ee.ImageCollection(simpleJoined).map(combineBands)
+        self.era5_land = era5_land
+        self.era5_single = era5_single
+
+        # Keep the endERA5 timestamp check
         self.endERA5 = (
-            self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-            .filterDate("2022", "2100")
+            self.era5_land.filterDate("2022", "2100")
             .aggregate_max("system:time_start")
             .getInfo()
         )
+
 
     def getMSE_Map(
         self,
@@ -103,6 +151,7 @@ class GP_map_v2(GEE_Service):
         maxSample=250,
         margin=30,
         maskThreshold=0.9,
+        dataset="land"
     ):
         """
         Generate MSE-based probability maps for geolocator analysis.
@@ -193,8 +242,13 @@ class GP_map_v2(GEE_Service):
             start = labelFeature.aggregate_min("system:time_start")
             end = labelFeature.aggregate_max("system:time_start")
 
-            # Load ERA5-LAND atmospheric data
-            ERA5 = self.ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+            # Select dataset dynamically
+            if dataset.lower() == "single-levels":
+                ERA5 = self.era5_single
+            elif dataset.lower() == "land":
+                ERA5 = self.era5_land
+            else:
+                ERA5 = self.ERA5Combined
 
             # Filter ERA5 data by time range (±1 hour buffer)
             ERA5_pressure = ERA5.filterDate(  # Fixed typo: was "ERA5_pressur"
@@ -229,15 +283,9 @@ class GP_map_v2(GEE_Service):
             def getError(feature):
                 """
                 Calculate MSE and altitude probability for each measurement.
-                
+
                 Uses barometric formula to compute altitude from pressure difference
                 and checks against DEM constraints for spatial feasibility.
-                
-                Args:
-                    feature: Earth Engine Feature with matched ERA5 data
-                    
-                Returns:
-                    Earth Engine Image with MSE and altitude probability
                 """
                 
                 # Calculate pressure error (observed vs ERA5)
@@ -252,9 +300,9 @@ class GP_map_v2(GEE_Service):
                 )
 
                 # Load reference geopotential and DEM data
-                geoPot = self.ee.Image(
-                    "projects/earthimages4unil/assets/PostDocProjects/rafnuss/Geopot_ERA5"
-                )
+                im = self.ee.Image(feature.get("bestERA5"))
+                geoPot = im.select("geopotential").divide(g0)  # Convert geopotential to altitude [m]
+
                 altIm = (
                     self.ee.ImageCollection(
                         "projects/earthimages4unil/assets/PostDocProjects/rafnuss/GLO_minMax_reduced"
@@ -525,6 +573,15 @@ class GP_map_v2(GEE_Service):
         pressure = jsonObj["pressure"]
         label = jsonObj["label"]
 
+        # Optional dataset selector ("land", "single-levels", or "both")
+        dataset = "land"
+        if "dataset" in jsonObj.keys():
+            dataset_val = jsonObj["dataset"]
+            if isinstance(dataset_val, list) and len(dataset_val) > 0:
+                dataset = str(dataset_val[0])
+            else:
+                dataset = str(dataset_val)
+
         # Validate array lengths
         if len(time) != len(pressure) or len(time) != len(label):
             return printErrorMessage(
@@ -564,6 +621,7 @@ class GP_map_v2(GEE_Service):
                 maxSample,
                 margin,
                 maskThreshold,
+                dataset,
             )
             response = {"status": "success", "taskID": timeStamp, "data": data}
             return (
