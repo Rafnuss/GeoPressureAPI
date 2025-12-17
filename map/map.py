@@ -151,7 +151,7 @@ class GP_map_v2(GEE_Service):
         maxSample=250,
         margin=30,
         maskThreshold=0.9,
-        dataset="both"
+        dataset="land"
     ):
         """
         Generate MSE-based probability maps for geolocator analysis.
@@ -574,7 +574,7 @@ class GP_map_v2(GEE_Service):
         label = jsonObj["label"]
 
         # Optional dataset selector ("land", "single-levels", or "both")
-        dataset = "both"
+        dataset = "land"
         if "dataset" in jsonObj.keys():
             dataset_val = jsonObj["dataset"]
             if isinstance(dataset_val, list) and len(dataset_val) > 0:
